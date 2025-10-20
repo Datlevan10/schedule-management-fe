@@ -10,7 +10,12 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  profession_id: number;
+  profession_level: 'student' | 'resident' | 'junior' | 'senior' | 'expert';
+  workplace?: string;
+  department?: string;
+  work_schedule?: any;
+  work_habits?: any;
 }
 
 export interface AuthResponse {
@@ -41,7 +46,7 @@ export const AuthAPI = {
   },
 
   register: async (data: RegisterRequest) => {
-    const response = await api.post<AuthResponse>('/auth/register', data);
+    const response = await api.post<AuthResponse>('/register', data);
     if (response.data.token) {
       await AsyncStorage.setItem('@auth_token', response.data.token);
       await AsyncStorage.setItem('@user_data', JSON.stringify(response.data.user));
