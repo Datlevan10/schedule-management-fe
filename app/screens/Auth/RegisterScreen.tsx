@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -10,9 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, Input } from '../../components/common';
+import { ProfessionsAPI, type Profession } from '../../api/professions.api';
+import { Button, Input, Select } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
+
+type ProfessionLevel = 'student' | 'resident' | 'junior' | 'senior' | 'expert';
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -20,17 +23,54 @@ export default function RegisterScreen() {
     email: '',
     password: '',
     confirmPassword: '',
+    professionId: 0,
+    professionLevel: '' as ProfessionLevel,
+    workplace: '',
+    department: '',
   });
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [loadingProfessions, setLoadingProfessions] = useState(true);
+  
   const [errors, setErrors] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    professionId: '',
+    professionLevel: '',
+    workplace: '',
+    department: '',
   });
 
   const { register, isLoading, error, clearError } = useAuth();
+
+  const professionLevelOptions = [
+    { label: 'Student', value: 'student' },
+    { label: 'Resident', value: 'resident' },
+    { label: 'Junior', value: 'junior' },
+    { label: 'Senior', value: 'senior' },
+    { label: 'Expert', value: 'expert' },
+  ];
+
+  useEffect(() => {
+    fetchProfessions();
+  }, []);
+
+  const fetchProfessions = async () => {
+    try {
+      setLoadingProfessions(true);
+      const response = await ProfessionsAPI.getAll();
+      setProfessions(response.data);
+    } catch (error) {
+      console.error('Failed to fetch professions:', error);
+      Alert.alert('Error', 'Failed to load professions. Please try again.');
+    } finally {
+      setLoadingProfessions(false);
+    }
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,6 +83,10 @@ export default function RegisterScreen() {
       email: '',
       password: '',
       confirmPassword: '',
+      professionId: '',
+      professionLevel: '',
+      workplace: '',
+      department: '',
     };
     let isValid = true;
 
@@ -65,11 +109,8 @@ export default function RegisterScreen() {
     if (!formData.password) {
       newErrors.password = 'Password is required';
       isValid = false;
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-      isValid = false;
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
       isValid = false;
     }
 
@@ -81,13 +122,23 @@ export default function RegisterScreen() {
       isValid = false;
     }
 
+    if (!formData.professionId) {
+      newErrors.professionId = 'Profession is required';
+      isValid = false;
+    }
+
+    if (!formData.professionLevel) {
+      newErrors.professionLevel = 'Profession level is required';
+      isValid = false;
+    }
+
     setErrors(newErrors);
     return isValid;
   };
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
@@ -97,7 +148,17 @@ export default function RegisterScreen() {
 
     if (!validateForm()) return;
 
-    const result = await register(formData);
+    const registrationData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      profession_id: formData.professionId,
+      profession_level: formData.professionLevel,
+      workplace: formData.workplace || undefined,
+      department: formData.department || undefined,
+    };
+
+    const result = await register(registrationData);
 
     if (result.success) {
       Alert.alert(
@@ -106,7 +167,7 @@ export default function RegisterScreen() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/(tabs)/schedule'),
+            onPress: () => router.replace('/(tabs)'),
           },
         ]
       );
@@ -165,7 +226,7 @@ export default function RegisterScreen() {
               rightIcon={
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                   <Text style={styles.eyeIcon}>
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? '🙈' : '👁'}
                   </Text>
                 </TouchableOpacity>
               }
@@ -181,19 +242,51 @@ export default function RegisterScreen() {
               rightIcon={
                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                   <Text style={styles.eyeIcon}>
-                    {showConfirmPassword ? '🙈' : '👁️'}
+                    {showConfirmPassword ? '🙈' : '👁'}
                   </Text>
                 </TouchableOpacity>
               }
             />
 
-            <View style={styles.passwordRequirements}>
-              <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-              <Text style={styles.requirementText}>• At least 8 characters</Text>
-              <Text style={styles.requirementText}>• One uppercase letter</Text>
-              <Text style={styles.requirementText}>• One lowercase letter</Text>
-              <Text style={styles.requirementText}>• One number</Text>
-            </View>
+            <Select
+              label="Profession"
+              placeholder="Select your profession"
+              options={professions.map(p => ({ 
+                label: p.display_name, 
+                value: p.id 
+              }))}
+              value={formData.professionId}
+              onValueChange={(value) => handleInputChange('professionId', value)}
+              error={errors.professionId}
+              disabled={loadingProfessions}
+            />
+
+            <Select
+              label="Profession Level"
+              placeholder="Select your level"
+              options={professionLevelOptions}
+              value={formData.professionLevel}
+              onValueChange={(value) => handleInputChange('professionLevel', value as ProfessionLevel)}
+              error={errors.professionLevel}
+            />
+
+            <Input
+              label="Workplace (Optional)"
+              value={formData.workplace}
+              onChangeText={(value) => handleInputChange('workplace', value)}
+              placeholder="Enter your workplace"
+              autoCapitalize="words"
+              error={errors.workplace}
+            />
+
+            <Input
+              label="Department (Optional)"
+              value={formData.department}
+              onChangeText={(value) => handleInputChange('department', value)}
+              placeholder="Enter your department"
+              autoCapitalize="words"
+              error={errors.department}
+            />
 
             <Button
               title="Create Account"
@@ -250,24 +343,8 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
-  passwordRequirements: {
-    backgroundColor: Colors.background.secondary,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  requirementsTitle: {
-    ...Typography.body2,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  requirementText: {
-    ...Typography.caption,
-    color: Colors.text.secondary,
-    marginBottom: 4,
-  },
   registerButton: {
+    marginTop: 24,
     marginBottom: 16,
   },
   errorText: {
