@@ -62,7 +62,7 @@ export default function LoginScreen() {
     const result = await login({ email, password });
     
     if (result.success) {
-      router.replace('/(tabs)/schedule');
+      router.replace('/(tabs)');
     } else {
       Alert.alert('Login Failed', result.error || 'Please try again');
     }

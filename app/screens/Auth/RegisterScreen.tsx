@@ -167,7 +167,7 @@ export default function RegisterScreen() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/(tabs)/schedule'),
+            onPress: () => router.replace('/(tabs)'),
           },
         ]
       );
