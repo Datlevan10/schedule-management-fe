@@ -2,13 +2,25 @@ import api from './index';
 
 export interface Profession {
   id: number;
+  name: string;
   display_name: string;
-  description?: string;
+  description: string;
+  default_categories: string[];
+  default_priorities: Record<string, number>;
+  ai_keywords: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProfessionsResponse {
+  success: boolean;
+  data: Profession[];
 }
 
 export const ProfessionsAPI = {
   getAll: async () => {
-    return api.get<Profession[]>('/professions');
+    const response = await api.get<ProfessionsResponse>('/professions');
+    return { data: response.data.data, status: response.status };
   },
 
   getById: async (id: number) => {

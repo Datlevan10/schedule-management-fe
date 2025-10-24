@@ -89,12 +89,18 @@ export const Input: React.FC<InputProps> = ({
           maxLength={maxLength}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          clearButtonMode="while-editing"
+          returnKeyType="next"
+          blurOnSubmit={false}
+          accessible={true}
+          accessibilityLabel={label || placeholder}
         />
         {rightIcon && (
           <TouchableOpacity
             style={styles.rightIcon}
             onPress={onRightIconPress}
             disabled={!onRightIconPress}
+            activeOpacity={0.7}
           >
             {rightIcon}
           </TouchableOpacity>
@@ -145,6 +151,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     paddingHorizontal: 12,
     paddingVertical: 12,
+    zIndex: 1,
   },
   inputWithLeftIcon: {
     paddingLeft: 8,

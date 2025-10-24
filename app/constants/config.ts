@@ -1,8 +1,21 @@
 import { Platform } from 'react-native';
 
+const getApiBaseUrl = () => {
+  if (!__DEV__) {
+    return 'https://api.scheduleapp.com/v1';
+  }
+  
+  if (Platform.OS === 'web') {
+    return 'http://127.0.0.1:8000/api/v1';
+  }
+  
+  // For mobile devices and emulators, use your local network IP
+  return 'http://192.168.1.216:8000/api/v1';
+};
+
 export const Config = {
   API: {
-    BASE_URL: __DEV__ ? 'http://127.0.0.1:8000/api/v1' : 'https://api.scheduleapp.com/v1',
+    BASE_URL: getApiBaseUrl(),
     TIMEOUT: 10000,
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000,

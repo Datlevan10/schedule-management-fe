@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, Input } from '../../components/common';
+import { Button, Input, EyeIcon } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 
@@ -84,6 +84,7 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
           <View style={styles.header}>
@@ -110,12 +111,12 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               error={passwordError}
               rightIcon={
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Text style={styles.eyeIcon}>
-                    {showPassword ? '🙈' : '👁️'}
-                  </Text>
-                </TouchableOpacity>
+                <EyeIcon 
+                  isVisible={showPassword} 
+                  color={Colors.text.secondary} 
+                />
               }
+              onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
             <TouchableOpacity
@@ -211,8 +212,5 @@ const styles = StyleSheet.create({
     ...Typography.body2,
     color: Colors.primary,
     fontWeight: '600',
-  },
-  eyeIcon: {
-    fontSize: 20,
   },
 });

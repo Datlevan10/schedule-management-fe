@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { ProfessionsAPI, type Profession } from '../../api/professions.api';
-import { Button, Input, Select } from '../../components/common';
+import { Button, Input, Select, EyeIcon } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 
@@ -55,22 +55,92 @@ export default function RegisterScreen() {
     { label: 'Expert', value: 'expert' },
   ];
 
-  useEffect(() => {
-    fetchProfessions();
-  }, []);
-
-  const fetchProfessions = async () => {
+  const fetchProfessions = useCallback(async () => {
     try {
       setLoadingProfessions(true);
       const response = await ProfessionsAPI.getAll();
       setProfessions(response.data);
     } catch (error) {
       console.error('Failed to fetch professions:', error);
-      Alert.alert('Error', 'Failed to load professions. Please try again.');
+      
+      // Provide fallback professions if API fails - matching real API structure
+      const fallbackProfessions: Profession[] = [
+        {
+          id: 1,
+          name: 'student',
+          display_name: 'Student',
+          description: 'Academic students from all levels',
+          default_categories: ['Exams', 'Assignments', 'Classes', 'Study Groups', 'Projects'],
+          default_priorities: { exam: 5, assignment: 4, class: 3, study: 2, social: 1 },
+          ai_keywords: ['exam', 'test', 'assignment', 'homework', 'class', 'lecture', 'study'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          name: 'doctor',
+          display_name: 'Doctor / Medical Professional',
+          description: 'Medical doctors and healthcare professionals',
+          default_categories: ['Surgery', 'Consultations', 'Rounds', 'Emergency', 'Research'],
+          default_priorities: { emergency: 5, surgery: 5, consultation: 4, rounds: 3, research: 2 },
+          ai_keywords: ['surgery', 'patient', 'consultation', 'emergency', 'rounds', 'appointment'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 3,
+          name: 'teacher',
+          display_name: 'Teacher / Educator',
+          description: 'Teachers and educational professionals',
+          default_categories: ['Classes', 'Lesson Planning', 'Grading', 'Meetings', 'Training'],
+          default_priorities: { class: 5, meeting: 4, grading: 3, planning: 2, training: 2 },
+          ai_keywords: ['class', 'lesson', 'grade', 'meeting', 'parent', 'student', 'curriculum'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 4,
+          name: 'engineer',
+          display_name: 'Engineer / Technical Professional',
+          description: 'Engineers and technical professionals',
+          default_categories: ['Development', 'Meetings', 'Testing', 'Documentation', 'Research'],
+          default_priorities: { deadline: 5, meeting: 4, development: 3, testing: 3, documentation: 2 },
+          ai_keywords: ['code', 'development', 'meeting', 'deadline', 'testing', 'review'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 5,
+          name: 'business',
+          display_name: 'Business Professional',
+          description: 'Business professionals and managers',
+          default_categories: ['Meetings', 'Presentations', 'Negotiations', 'Planning', 'Travel'],
+          default_priorities: { client: 5, presentation: 4, meeting: 3, planning: 2, travel: 2 },
+          ai_keywords: ['meeting', 'client', 'presentation', 'negotiation', 'deal', 'proposal'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ];
+      
+      setProfessions(fallbackProfessions);
+      
+      // Show a more user-friendly error message with retry option
+      Alert.alert(
+        'Connection Issue', 
+        'Unable to connect to server. Using offline profession list. Please check your internet connection.',
+        [
+          { text: 'Use Offline List', style: 'cancel' },
+          { text: 'Retry', onPress: () => fetchProfessions() }
+        ]
+      );
     } finally {
       setLoadingProfessions(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProfessions();
+  }, [fetchProfessions]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -177,7 +247,7 @@ export default function RegisterScreen() {
   };
 
   const handleSignIn = () => {
-    router.back();
+    router.push('/auth/login');
   };
 
   return (
@@ -224,12 +294,12 @@ export default function RegisterScreen() {
               secureTextEntry={!showPassword}
               error={errors.password}
               rightIcon={
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Text style={styles.eyeIcon}>
-                    {showPassword ? '🙈' : '👁'}
-                  </Text>
-                </TouchableOpacity>
+                <EyeIcon 
+                  isVisible={showPassword} 
+                  color={Colors.text.secondary} 
+                />
               }
+              onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
             <Input
@@ -240,12 +310,12 @@ export default function RegisterScreen() {
               secureTextEntry={!showConfirmPassword}
               error={errors.confirmPassword}
               rightIcon={
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                  <Text style={styles.eyeIcon}>
-                    {showConfirmPassword ? '🙈' : '👁'}
-                  </Text>
-                </TouchableOpacity>
+                <EyeIcon 
+                  isVisible={showConfirmPassword} 
+                  color={Colors.text.secondary} 
+                />
               }
+              onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
             />
 
             <Select
@@ -367,8 +437,5 @@ const styles = StyleSheet.create({
     ...Typography.body2,
     color: Colors.primary,
     fontWeight: '600',
-  },
-  eyeIcon: {
-    fontSize: 20,
   },
 });

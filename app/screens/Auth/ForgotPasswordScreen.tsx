@@ -65,7 +65,7 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleBackToLogin = () => {
-    router.back();
+    router.push('/auth/login');
   };
 
   const handleResendLink = () => {
