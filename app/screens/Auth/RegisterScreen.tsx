@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { ProfessionsAPI, type Profession } from '../../api/professions.api';
-import { Button, Input, Select, EyeIcon } from '../../components/common';
+import { Button, EyeIcon, Input, Select } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 

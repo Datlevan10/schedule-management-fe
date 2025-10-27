@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, Input, EyeIcon } from '../../components/common';
+import { Button, EyeIcon, Input } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 
@@ -88,8 +88,8 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.title}>Chào mừng trở lại</Text>
+            <Text style={styles.subtitle}>Đăng nhập vào tài khoản của bạn</Text>
           </View>
 
           <View style={styles.form}>

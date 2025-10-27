@@ -88,7 +88,7 @@ export default function WelcomeScreen() {
   }, []);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const initializeWelcomeScreen = async () => {
       try {
@@ -98,16 +98,16 @@ export default function WelcomeScreen() {
         setWelcomeData(data);
         setLoading(false);
 
-        // Navigate to login after the specified delay
+        // Navigate to feature showcase after the specified delay
         timeoutId = setTimeout(() => {
-          router.replace('/auth/login');
+          router.replace('/feature-showcase');
         }, data.delayMs);
       } catch (error: any) {
         console.error('Error in initializeWelcomeScreen:', error);
         setLoading(false);
         // Fallback to default behavior
         timeoutId = setTimeout(() => {
-          router.replace('/auth/login');
+          router.replace('/feature-showcase');
         }, 3000);
       }
     };
