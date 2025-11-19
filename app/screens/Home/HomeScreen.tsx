@@ -7,147 +7,149 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Colors, Typography } from '../../constants';
 import { Card } from '../../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
+import { useAuth } from '../../hooks';
 
-interface ScheduleTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  icon: string;
-  color: string;
-  scheduleItems: number;
-}
+const professionIcons: Record<string, string> = {
+  'doctor': '👨‍⚕️',
+  'student': '📚',
+  'teacher': '👨‍🏫',
+  'engineer': '⚙️',
+  'manager': '💼',
+  'sales': '💰',
+  'default': '📋',
+};
 
-const scheduleTemplates: ScheduleTemplate[] = [
-  {
-    id: '1',
-    name: 'Student Daily',
-    description: 'Perfect for students managing classes and study time',
-    category: 'Education',
-    icon: '📚',
-    color: '#6366F1',
-    scheduleItems: 8,
-  },
-  {
-    id: '2',
-    name: 'Work From Home',
-    description: 'Optimize your remote work productivity',
-    category: 'Professional',
-    icon: '💼',
-    color: '#10B981',
-    scheduleItems: 10,
-  },
-  {
-    id: '3',
-    name: 'Fitness Routine',
-    description: 'Stay fit with structured workout schedules',
-    category: 'Health',
-    icon: '🏋️',
-    color: '#F59E0B',
-    scheduleItems: 6,
-  },
-  {
-    id: '4',
-    name: 'Freelancer Pro',
-    description: 'Manage multiple clients and projects efficiently',
-    category: 'Professional',
-    icon: '🚀',
-    color: '#8B5CF6',
-    scheduleItems: 12,
-  },
-  {
-    id: '5',
-    name: 'Family Planner',
-    description: 'Coordinate family activities and responsibilities',
-    category: 'Personal',
-    icon: '👨‍👩‍👧‍👦',
-    color: '#EC4899',
-    scheduleItems: 9,
-  },
-  {
-    id: '6',
-    name: 'Morning Routine',
-    description: 'Start your day right with a structured morning',
-    category: 'Personal',
-    icon: '☀️',
-    color: '#14B8A6',
-    scheduleItems: 5,
-  },
-];
+const professionColors: Record<string, string> = {
+  'doctor': '#EF4444',
+  'student': '#6366F1',
+  'teacher': '#10B981',
+  'engineer': '#F59E0B',
+  'manager': '#8B5CF6',
+  'sales': '#EC4899',
+  'default': '#6B7280',
+};
 
 export default function HomeScreen() {
-  const [userName, setUserName] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const { user } = useAuth();
+  const [templates, setTemplates] = useState<ScheduleImportTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedProfession, setSelectedProfession] = useState<string>('All');
 
   useEffect(() => {
-    loadUserData();
+    fetchTemplates();
   }, []);
 
-  const loadUserData = async () => {
+  const fetchTemplates = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (userData) {
-        const parsedData = JSON.parse(userData);
-        setUserName(parsedData.name || parsedData.email || 'User');
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
+      setIsLoading(true);
+      setError(null);
+      const response = await ScheduleTemplateAPI.getTemplates();
+      setTemplates(response.data.data);
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+      setError('Unable to load templates. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const categories = ['All', 'Education', 'Professional', 'Health', 'Personal'];
+  const professions = ['All', ...new Set(templates.map(t => t.profession?.display_name || 'Other'))];
 
-  const filteredTemplates = selectedCategory === 'All'
-    ? scheduleTemplates
-    : scheduleTemplates.filter(template => template.category === selectedCategory);
+  const filteredTemplates = selectedProfession === 'All'
+    ? templates
+    : templates.filter(template => template.profession?.display_name === selectedProfession);
 
-  const handleTemplateSelect = (template: ScheduleTemplate) => {
+  const handleTemplateSelect = (template: ScheduleImportTemplate) => {
     Alert.alert(
-      'Import Template',
-      `Would you like to import "${template.name}" template?`,
+      'Template Options',
+      `Choose an action for "${template.template_name}"`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Import', 
+          text: 'View Details', 
           onPress: () => {
-            Alert.alert('Success', 'Template imported successfully!');
+            Alert.alert(
+              template.template_name,
+              `${template.template_description}\n\nRequired columns: ${template.format_specifications.required_columns.join(', ')}\n\nOptional columns: ${template.format_specifications.optional_columns.join(', ')}`,
+              [{ text: 'OK' }]
+            );
           } 
+        },
+        { 
+          text: 'Download Template', 
+          onPress: () => handleDownloadTemplate(template.id)
         },
       ]
     );
   };
 
-  const renderTemplate = ({ item }: { item: ScheduleTemplate }) => (
-    <TouchableOpacity onPress={() => handleTemplateSelect(item)}>
-      <Card style={[styles.templateCard, { borderLeftColor: item.color }]}>
-        <View style={styles.templateHeader}>
-          <Text style={styles.templateIcon}>{item.icon}</Text>
-          <View style={styles.templateInfo}>
-            <Text style={styles.templateName}>{item.name}</Text>
-            <Text style={styles.templateCategory}>{item.category}</Text>
+  const handleDownloadTemplate = async (templateId: number) => {
+    try {
+      const template = templates.find(t => t.id === templateId);
+      if (template?.file_information?.download_urls?.template) {
+        await Linking.openURL(template.file_information.download_urls.template);
+        Alert.alert('Success', 'Template download started!');
+      } else {
+        Alert.alert('Error', 'Download URL not available');
+      }
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      Alert.alert('Error', 'Failed to download template');
+    }
+  };
+
+  const renderTemplate = ({ item }: { item: ScheduleImportTemplate }) => {
+    const professionName = item.profession?.name || 'default';
+    const icon = professionIcons[professionName] || professionIcons.default;
+    const color = professionColors[professionName] || professionColors.default;
+    const requiredColumns = item.format_specifications.required_columns.length;
+    const optionalColumns = item.format_specifications.optional_columns.length;
+
+    return (
+      <TouchableOpacity onPress={() => handleTemplateSelect(item)}>
+        <Card style={{ ...styles.templateCard, borderLeftColor: color }}>
+          <View style={styles.templateHeader}>
+            <Text style={styles.templateIcon}>{icon}</Text>
+            <View style={styles.templateInfo}>
+              <Text style={styles.templateName}>{item.template_name}</Text>
+              <Text style={styles.templateCategory}>
+                {item.profession?.display_name || 'General'}
+              </Text>
+            </View>
           </View>
-        </View>
-        <Text style={styles.templateDescription}>{item.description}</Text>
-        <View style={styles.templateFooter}>
-          <Text style={styles.scheduleItems}>{item.scheduleItems} schedule items</Text>
-          <TouchableOpacity style={[styles.importButton, { backgroundColor: item.color }]}>
-            <Text style={styles.importButtonText}>Import</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+          <Text style={styles.templateDescription}>{item.template_description}</Text>
+          <View style={styles.templateFooter}>
+            <Text style={styles.scheduleItems}>
+              {requiredColumns} required, {optionalColumns} optional fields
+            </Text>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                style={[styles.downloadButton, { backgroundColor: color }]}
+                onPress={() => handleDownloadTemplate(item.id)}
+              >
+                <Text style={styles.downloadButtonText}>📥 CSV</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.userName}>{userName}! 👋</Text>
+          <Text style={styles.welcomeText}>Chào mừng trở lại,</Text>
+          <Text style={styles.userName}>{user?.name || 'User'}! 👋</Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Text style={styles.notificationIcon}>🔔</Text>
@@ -172,42 +174,64 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Schedule Templates</Text>
         <Text style={styles.sectionSubtitle}>
-          Choose from our curated templates to get started quickly
+          Chọn mẫu lịch phù hợp với nghề nghiệp của bạn
         </Text>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryList}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryChip,
-                selectedCategory === category && styles.categoryChipActive
-              ]}
-              onPress={() => setSelectedCategory(category)}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  selectedCategory === category && styles.categoryChipTextActive
-                ]}
-              >
-                {category}
-              </Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Đang tải mẫu lịch...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchTemplates}>
+              <Text style={styles.retryButtonText}>Thử lại</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.categoryList}
+            >
+              {professions.map((profession) => (
+                <TouchableOpacity
+                  key={profession}
+                  style={[
+                    styles.categoryChip,
+                    selectedProfession === profession && styles.categoryChipActive
+                  ]}
+                  onPress={() => setSelectedProfession(profession)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedProfession === profession && styles.categoryChipTextActive
+                    ]}
+                  >
+                    {profession}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-        <FlatList
-          data={filteredTemplates}
-          renderItem={renderTemplate}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          contentContainerStyle={styles.templateList}
-        />
+            {filteredTemplates.length > 0 ? (
+              <FlatList
+                data={filteredTemplates}
+                renderItem={renderTemplate}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                contentContainerStyle={styles.templateList}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Không có mẫu lịch nào</Text>
+              </View>
+            )}
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -347,14 +371,56 @@ const styles = StyleSheet.create({
     ...Typography.body2,
     color: Colors.text.tertiary,
   },
-  importButton: {
-    paddingHorizontal: 16,
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  downloadButton: {
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
-  importButtonText: {
+  downloadButtonText: {
     ...Typography.body2,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    marginTop: 12,
+  },
+  errorContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  errorText: {
+    ...Typography.body2,
+    color: Colors.danger,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    ...Typography.body2,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
   },
 });

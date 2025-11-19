@@ -1,14 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { AuthAPI, type LoginRequest, type RegisterRequest } from '../api/auth.api';
+import { AuthAPI, type LoginRequest, type RegisterRequest, type User } from '../api/auth.api';
 import { StorageKeys } from '../constants';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-}
 
 interface AuthState {
   user: User | null;
@@ -74,7 +68,7 @@ export const useAuth = () => {
       const response = await AuthAPI.login(credentials);
       
       setState({
-        user: response.data.user,
+        user: response.data.data.user,
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -103,7 +97,7 @@ export const useAuth = () => {
       const response = await AuthAPI.register(userData);
       
       setState({
-        user: response.data.user,
+        user: response.data.data.user,
         isAuthenticated: true,
         isLoading: false,
         error: null,
