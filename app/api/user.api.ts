@@ -1,4 +1,42 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from './index';
+import { StorageKeys } from '../constants';
+
+export interface Profession {
+  id: number;
+  name: string;
+  display_name: string;
+  level: string;
+}
+
+export interface NotificationPreferences {
+  email_notifications: boolean;
+  push_notifications: boolean;
+  reminder_advance_minutes: number[];
+}
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  email_verified: boolean;
+  email_verified_at: string | null;
+  profession: Profession;
+  workplace: string;
+  department: string;
+  work_schedule: string[];
+  work_habits: string[];
+  notification_preferences: NotificationPreferences;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  member_since: string;
+}
+
+export interface UserProfileResponse {
+  success: boolean;
+  data: UserProfile;
+}
 
 export interface User {
   id: string;
@@ -43,6 +81,40 @@ export interface ChangePasswordRequest {
 export const UserAPI = {
   getProfile: async () => {
     return api.get<User>('/user/profile');
+  },
+
+  getUserProfile: async (userId?: number): Promise<UserProfileResponse> => {
+    try {
+      let userIdToFetch = userId;
+      
+      if (!userIdToFetch) {
+        const userData = await AsyncStorage.getItem(StorageKeys.AUTH.USER_DATA);
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          userIdToFetch = parsed.id;
+        }
+      }
+      
+      if (!userIdToFetch) {
+        throw new Error('User ID not found');
+      }
+      
+      const response = await api.get<UserProfileResponse>(`/users/${userIdToFetch}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      throw error;
+    }
+  },
+
+  updateUserProfile: async (userId: number, data: Partial<UserProfile>): Promise<UserProfileResponse> => {
+    try {
+      const response = await api.put<UserProfileResponse>(`/users/${userId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
   },
 
   updateProfile: async (data: UpdateProfileRequest) => {

@@ -1,5 +1,5 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
 import { Platform, Text } from 'react-native';
 
 export default function TabLayout() {
@@ -25,36 +25,36 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Trang chủ',
           tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="🏠" color={color} focused={color === '#6366F1'} />
+            <MaterialIcons name="home" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          title: 'Create Task',
+          title: 'Tạo nhiệm vụ',
           tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="➕" color={color} focused={color === '#6366F1'} />
+            <MaterialIcons name="task" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="notify"
         options={{
-          title: 'Notify',
+          title: 'Thông báo',
           tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="🔔" color={color} focused={color === '#6366F1'} />
+            <MaterialIcons name="notifications" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Hồ sơ',
           tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="👤" color={color} focused={color === '#6366F1'} />
+            <MaterialIcons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -64,10 +64,10 @@ export default function TabLayout() {
 
 function TabIcon({ icon, color, focused }: { icon: string; color: string; focused: boolean }) {
   return (
-    <Text style={{ 
-      fontSize: focused ? 26 : 24, 
+    <Text style={{
+      fontSize: focused ? 26 : 24,
       marginBottom: 2,
-      opacity: focused ? 1 : 0.7 
+      opacity: focused ? 1 : 0.7
     }}>
       {icon}
     </Text>

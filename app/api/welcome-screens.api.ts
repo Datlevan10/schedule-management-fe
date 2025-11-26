@@ -19,12 +19,7 @@ interface WelcomeScreenResponse {
 
 export const WelcomeScreensAPI = {
   get: async () => {
-    // console.log("Making API call to /welcome-screen");
     const response = await api.get<WelcomeScreenResponse>("/welcome-screen");
-    // console.log("Raw API response:", {
-    //   status: response.status,
-    //   data: response.data,
-    // });
     return { data: response.data.data, status: response.status };
   },
 

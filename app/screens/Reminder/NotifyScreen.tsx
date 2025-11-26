@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
   Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Colors, Typography } from '../../constants';
 import { Card } from '../../components/common';
+import { Colors, Typography } from '../../constants';
 
 interface Notification {
   id: string;
@@ -110,13 +110,13 @@ export default function NotifyScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Notifications</Text>
+          <Text style={styles.title}>Thông báo</Text>
           <Text style={styles.subtitle}>
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
           </Text>
         </View>
         <View style={styles.notificationToggle}>
-          <Text style={styles.toggleLabel}>Enable</Text>
+          <Text style={styles.toggleLabel}>Cho phép</Text>
           <Switch
             value={notificationsEnabled}
             onValueChange={setNotificationsEnabled}
@@ -132,7 +132,7 @@ export default function NotifyScreen() {
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-            All
+          Tất cả
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -140,7 +140,7 @@ export default function NotifyScreen() {
           onPress={() => setFilter('unread')}
         >
           <Text style={[styles.filterText, filter === 'unread' && styles.filterTextActive]}>
-            Unread ({unreadCount})
+            Chưa đọc ({unreadCount})
           </Text>
         </TouchableOpacity>
       </View>

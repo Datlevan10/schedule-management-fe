@@ -28,12 +28,12 @@ export default function RegisterScreen() {
     workplace: '',
     department: '',
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [loadingProfessions, setLoadingProfessions] = useState(true);
-  
+
   const [errors, setErrors] = useState({
     name: '',
     email: '',
@@ -62,7 +62,7 @@ export default function RegisterScreen() {
       setProfessions(response.data);
     } catch (error) {
       console.error('Failed to fetch professions:', error);
-      
+
       // Provide fallback professions if API fails - matching real API structure
       const fallbackProfessions: Profession[] = [
         {
@@ -121,12 +121,12 @@ export default function RegisterScreen() {
           updated_at: new Date().toISOString(),
         },
       ];
-      
+
       setProfessions(fallbackProfessions);
-      
+
       // Show a more user-friendly error message with retry option
       Alert.alert(
-        'Connection Issue', 
+        'Connection Issue',
         'Unable to connect to server. Using offline profession list. Please check your internet connection.',
         [
           { text: 'Use Offline List', style: 'cancel' },
@@ -161,23 +161,23 @@ export default function RegisterScreen() {
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Tên là bắt buộc';
       isValid = false;
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = 'Tên phải có ít nhất 2 ký tự';
       isValid = false;
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Email là bắt buộc';
       isValid = false;
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = 'Vui lòng nhập email hợp lệ';
       isValid = false;
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Mật khẩu là bắt buộc';
       isValid = false;
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
@@ -185,20 +185,20 @@ export default function RegisterScreen() {
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu của bạn';
       isValid = false;
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Mật khẩu không khớp';
       isValid = false;
     }
 
     if (!formData.professionId) {
-      newErrors.professionId = 'Profession is required';
+      newErrors.professionId = 'Nghề nghiệp là bắt buộc';
       isValid = false;
     }
 
     if (!formData.professionLevel) {
-      newErrors.professionLevel = 'Profession level is required';
+      newErrors.professionLevel = 'Trình độ chuyên môn là bắt buộc';
       isValid = false;
     }
 
@@ -232,8 +232,8 @@ export default function RegisterScreen() {
 
     if (result.success) {
       Alert.alert(
-        'Registration Successful',
-        'Your account has been created successfully!',
+        'Đăng ký thành công',
+        'Tài khoản của bạn đã được tạo thành công!',
         [
           {
             text: 'OK',
@@ -242,7 +242,7 @@ export default function RegisterScreen() {
         ]
       );
     } else {
-      Alert.alert('Registration Failed', result.error || 'Please try again');
+      Alert.alert('Đăng ký không thành công', result.error || 'Vui lòng thử lại');
     }
   };
 
@@ -262,16 +262,16 @@ export default function RegisterScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join us to manage your schedule</Text>
+            <Text style={styles.title}>Tạo tài khoản</Text>
+            <Text style={styles.subtitle}>Tham gia cùng chúng tôi để quản lý lịch trình của bạn</Text>
           </View>
 
           <View style={styles.form}>
             <Input
-              label="Full Name"
+              label="Họ và tên đầy đủ"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
-              placeholder="Enter your full name"
+              placeholder="Nhập tên đầy đủ của bạn"
               autoCapitalize="words"
               error={errors.name}
             />
@@ -280,7 +280,7 @@ export default function RegisterScreen() {
               label="Email"
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
-              placeholder="Enter your email"
+              placeholder="Nhập email của bạn"
               keyboardType="email-address"
               autoCapitalize="none"
               error={errors.email}
@@ -290,40 +290,40 @@ export default function RegisterScreen() {
               label="Password"
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
-              placeholder="Create a strong password"
+              placeholder="Tạo mật khẩu mạnh"
               secureTextEntry={!showPassword}
               error={errors.password}
               rightIcon={
-                <EyeIcon 
-                  isVisible={showPassword} 
-                  color={Colors.text.secondary} 
+                <EyeIcon
+                  isVisible={showPassword}
+                  color={Colors.text.secondary}
                 />
               }
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
             <Input
-              label="Confirm Password"
+              label="Xác nhận mật khẩu"
               value={formData.confirmPassword}
               onChangeText={(value) => handleInputChange('confirmPassword', value)}
-              placeholder="Confirm your password"
+              placeholder="Xác nhận mật khẩu của bạn"
               secureTextEntry={!showConfirmPassword}
               error={errors.confirmPassword}
               rightIcon={
-                <EyeIcon 
-                  isVisible={showConfirmPassword} 
-                  color={Colors.text.secondary} 
+                <EyeIcon
+                  isVisible={showConfirmPassword}
+                  color={Colors.text.secondary}
                 />
               }
               onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
             />
 
             <Select
-              label="Profession"
-              placeholder="Select your profession"
-              options={professions.map(p => ({ 
-                label: p.display_name, 
-                value: p.id 
+              label="Nghề nghiệp"
+              placeholder="Chọn nghề nghiệp của bạn"
+              options={professions.map(p => ({
+                label: p.display_name,
+                value: p.id
               }))}
               value={formData.professionId}
               onValueChange={(value) => handleInputChange('professionId', value)}
@@ -332,8 +332,8 @@ export default function RegisterScreen() {
             />
 
             <Select
-              label="Profession Level"
-              placeholder="Select your level"
+              label="Trình độ nghề nghiệp"
+              placeholder="Chọn cấp độ của bạn"
               options={professionLevelOptions}
               value={formData.professionLevel}
               onValueChange={(value) => handleInputChange('professionLevel', value as ProfessionLevel)}
@@ -341,25 +341,25 @@ export default function RegisterScreen() {
             />
 
             <Input
-              label="Workplace (Optional)"
+              label="Nơi làm việc (Tùy chọn)"
               value={formData.workplace}
               onChangeText={(value) => handleInputChange('workplace', value)}
-              placeholder="Enter your workplace"
+              placeholder="Nhập nơi làm việc của bạn"
               autoCapitalize="words"
               error={errors.workplace}
             />
 
             <Input
-              label="Department (Optional)"
+              label="Khoa (Tùy chọn)"
               value={formData.department}
               onChangeText={(value) => handleInputChange('department', value)}
-              placeholder="Enter your department"
+              placeholder="Nhập khoa của bạn"
               autoCapitalize="words"
               error={errors.department}
             />
 
             <Button
-              title="Create Account"
+              title="Tạo tài khoản"
               onPress={handleRegister}
               loading={isLoading}
               style={styles.registerButton}
@@ -371,9 +371,9 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>Bạn đã có tài khoản? </Text>
             <TouchableOpacity onPress={handleSignIn}>
-              <Text style={styles.signInText}>Sign In</Text>
+              <Text style={styles.signInText}>Đăng nhập</Text>
             </TouchableOpacity>
           </View>
         </View>

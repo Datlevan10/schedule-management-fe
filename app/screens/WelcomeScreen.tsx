@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native';
 import { WelcomeScreensAPI } from '../api/welcome-screens.api';
@@ -29,6 +31,7 @@ export default function WelcomeScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   const getImageUrl = (backgroundValue: string) => {
     return API_CONFIG.getImageUrl(backgroundValue);
@@ -98,16 +101,16 @@ export default function WelcomeScreen() {
         setWelcomeData(data);
         setLoading(false);
 
-        // Navigate to feature showcase after the specified delay
+        // Show role selection modal after the specified delay
         timeoutId = setTimeout(() => {
-          router.replace('/feature-showcase');
+          setShowRoleModal(true);
         }, data.delayMs);
       } catch (error: any) {
         console.error('Error in initializeWelcomeScreen:', error);
         setLoading(false);
         // Fallback to default behavior
         timeoutId = setTimeout(() => {
-          router.replace('/feature-showcase');
+          setShowRoleModal(true);
         }, 3000);
       }
     };
@@ -141,6 +144,15 @@ export default function WelcomeScreen() {
     </View>
   );
 
+  const handleRoleSelection = (role: 'customer' | 'admin') => {
+    setShowRoleModal(false);
+    if (role === 'admin') {
+      router.replace('/auth/admin-login');
+    } else {
+      router.replace('/feature-showcase');
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: 'white' }]}>
       <View style={styles.content}>
@@ -161,6 +173,38 @@ export default function WelcomeScreen() {
           />
         )}
       </View>
+
+      <Modal
+        visible={showRoleModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Chọn loại tài khoản</Text>
+            <Text style={styles.modalSubtitle}>Bạn muốn đăng nhập với vai trò nào?</Text>
+            
+            <TouchableOpacity
+              style={[styles.roleButton, styles.customerButton]}
+              onPress={() => handleRoleSelection('customer')}
+            >
+              <Text style={styles.roleIcon}>👤</Text>
+              <Text style={styles.roleButtonTitle}>Khách hàng</Text>
+              <Text style={styles.roleButtonSubtitle}>Dành cho người dùng thông thường</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.roleButton, styles.adminButton]}
+              onPress={() => handleRoleSelection('admin')}
+            >
+              <Text style={styles.roleIcon}>👨‍💼</Text>
+              <Text style={styles.roleButtonTitle}>Quản trị viên</Text>
+              <Text style={styles.roleButtonSubtitle}>Dành cho nhân viên quản lý</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -203,5 +247,60 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 32,
+    width: '85%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    ...Typography.h2,
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    ...Typography.body1,
+    color: Colors.text.secondary,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  roleButton: {
+    width: '100%',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  customerButton: {
+    backgroundColor: Colors.primary + '10',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  adminButton: {
+    backgroundColor: Colors.danger + '10',
+    borderWidth: 2,
+    borderColor: Colors.danger,
+  },
+  roleIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  roleButtonTitle: {
+    ...Typography.h3,
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  roleButtonSubtitle: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 });
