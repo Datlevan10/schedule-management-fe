@@ -1,19 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  FlatList,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Linking,
+  View,
 } from 'react-native';
-import { Colors, Typography } from '../../constants';
-import { Card } from '../../components/common';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
+import { Card } from '../../components/common';
+import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 
 const professionIcons: Record<string, string> = {
@@ -73,18 +72,18 @@ export default function HomeScreen() {
       `Choose an action for "${template.template_name}"`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'View Details', 
+        {
+          text: 'View Details',
           onPress: () => {
             Alert.alert(
               template.template_name,
               `${template.template_description}\n\nRequired columns: ${template.format_specifications.required_columns.join(', ')}\n\nOptional columns: ${template.format_specifications.optional_columns.join(', ')}`,
               [{ text: 'OK' }]
             );
-          } 
+          }
         },
-        { 
-          text: 'Download Template', 
+        {
+          text: 'Download Template',
           onPress: () => handleDownloadTemplate(template.id)
         },
       ]
@@ -131,7 +130,7 @@ export default function HomeScreen() {
               {requiredColumns} required, {optionalColumns} optional fields
             </Text>
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.downloadButton, { backgroundColor: color }]}
                 onPress={() => handleDownloadTemplate(item.id)}
               >

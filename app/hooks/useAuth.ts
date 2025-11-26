@@ -57,7 +57,7 @@ export const useAuth = () => {
     }
   };
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest & { role?: string }) => {
     setState(prev => ({
       ...prev,
       isLoading: true,
@@ -66,6 +66,11 @@ export const useAuth = () => {
 
     try {
       const response = await AuthAPI.login(credentials);
+      
+      // Store user role if provided
+      if (credentials.role) {
+        await AsyncStorage.setItem('userRole', credentials.role);
+      }
       
       setState({
         user: response.data.data.user,

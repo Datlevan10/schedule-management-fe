@@ -8,8 +8,17 @@ const getBaseURL = () => {
   const baseUrl = API_CONFIG.BASE_URL;
 
   if (Platform.OS === "android" && __DEV__) {
-    // Android emulator can use 10.0.2.2 to access host localhost
-    return baseUrl.replace("192.168.1.216", "10.0.2.2") + "/api/v1";
+    // Android emulator needs special handling for localhost
+    // If using machine's IP (192.168.x.x), keep it as is
+    // If using localhost/127.0.0.1, replace with 10.0.2.2
+    let androidUrl = baseUrl;
+    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
+      androidUrl = baseUrl.replace(/127\.0\.0\.1|localhost/, "10.0.2.2");
+    }
+    return androidUrl + "/api/v1";
+  } else if (Platform.OS === "ios" && __DEV__) {
+    // iOS simulator can use the machine's IP directly
+    return baseUrl + "/api/v1";
   }
 
   return baseUrl + "/api/v1";

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -10,11 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, EyeIcon, Input } from '../../components/common';
-import { Colors, Typography } from '../../constants';
-import { useAuth } from '../../hooks';
+import { Button, EyeIcon, Input } from '../components/common';
+import { Colors, Typography } from '../constants';
+import { useAuth } from '../hooks';
 
-export default function LoginScreen() {
+export default function AdminLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -54,26 +55,23 @@ export default function LoginScreen() {
     return isValid;
   };
 
-  const handleLogin = async () => {
+  const handleAdminLogin = async () => {
     clearError();
 
     if (!validateForm()) return;
 
-    const result = await login({ email, password });
+    const result = await login({ email, password, role: 'admin' });
 
     if (result.success) {
-      router.replace('/(tabs)');
+      await AsyncStorage.setItem('userRole', 'admin');
+      router.replace('/admin/dashboard');
     } else {
-      Alert.alert('Đăng nhập không thành công', result.error || 'Vui lòng thử lại');
+      Alert.alert('Đăng nhập không thành công', result.error || 'Vui lòng thử lại với tài khoản Admin');
     }
   };
 
-  const handleForgotPassword = () => {
-    router.push('/auth/forgot-password');
-  };
-
-  const handleSignUp = () => {
-    router.push('/auth/register');
+  const handleBackToWelcome = () => {
+    router.back();
   };
 
   return (
@@ -88,26 +86,29 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Chào mừng trở lại</Text>
-            <Text style={styles.subtitle}>Đăng nhập vào tài khoản của bạn</Text>
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeText}>ADMIN</Text>
+            </View>
+            <Text style={styles.title}>Admin Portal</Text>
+            <Text style={styles.subtitle}>Đăng nhập với tài khoản quản trị viên</Text>
           </View>
 
           <View style={styles.form}>
             <Input
-              label="Email"
+              label="Admin Email"
               value={email}
               onChangeText={setEmail}
-              placeholder="Nhập email của bạn"
+              placeholder="admin@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
               error={emailError}
             />
 
             <Input
-              label="Password"
+              label="Admin Password"
               value={password}
               onChangeText={setPassword}
-              placeholder="Nhập mật khẩu của bạn"
+              placeholder="Nhập mật khẩu admin"
               secureTextEntry={!showPassword}
               error={passwordError}
               rightIcon={
@@ -119,16 +120,9 @@ export default function LoginScreen() {
               onRightIconPress={() => setShowPassword(!showPassword)}
             />
 
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-            </TouchableOpacity>
-
             <Button
-              title="Đăng nhập"
-              onPress={handleLogin}
+              title="Đăng nhập Admin"
+              onPress={handleAdminLogin}
               loading={isLoading}
               style={styles.loginButton}
             />
@@ -139,10 +133,16 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Bạn chưa có tài khoản? </Text>
-            <TouchableOpacity onPress={handleSignUp}>
-              <Text style={styles.signUpText}>Đăng ký</Text>
+            <TouchableOpacity onPress={handleBackToWelcome}>
+              <Text style={styles.backText}>← Quay lại màn hình chính</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.securityNote}>
+            <Text style={styles.securityIcon}>🔒</Text>
+            <Text style={styles.securityText}>
+              Khu vực này chỉ dành cho quản trị viên được ủy quyền
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -168,6 +168,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  adminBadge: {
+    backgroundColor: Colors.danger,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  adminBadgeText: {
+    color: Colors.white,
+    fontWeight: 'bold',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
   title: {
     ...Typography.h1,
     color: Colors.text.primary,
@@ -181,36 +194,39 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    ...Typography.body2,
-    color: Colors.primary,
-  },
   loginButton: {
-    marginBottom: 16,
+    marginTop: 24,
+    backgroundColor: Colors.danger,
   },
   errorText: {
     ...Typography.body2,
     color: Colors.danger,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 16,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 32,
   },
-  footerText: {
-    ...Typography.body2,
-    color: Colors.text.secondary,
-  },
-  signUpText: {
+  backText: {
     ...Typography.body2,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+    paddingHorizontal: 20,
+  },
+  securityIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  securityText: {
+    ...Typography.body2,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
   },
 });

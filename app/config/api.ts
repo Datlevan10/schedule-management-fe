@@ -6,15 +6,16 @@
 export const API_CONFIG = {
   // Base URLs for different environments
   BASE_URLS: {
-    DEVELOPMENT: 'http://192.168.1.216:8000',
+    DEVELOPMENT: 'http://192.168.1.2:8000',
     PRODUCTION: 'https://api.scheduleapp.com',
     LOCALHOST: 'http://127.0.0.1:8000',
+    LOCAL_IP: 'http://192.168.1.2:8000', // Your machine's local IP
   },
 
   // Current base URL based on environment
   get BASE_URL() {
     return __DEV__ 
-      ? this.BASE_URLS.DEVELOPMENT 
+      ? this.BASE_URLS.LOCAL_IP  // Use machine's IP for development
       : this.BASE_URLS.PRODUCTION;
   },
 
