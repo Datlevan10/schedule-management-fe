@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ interface InputProps {
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoCorrect?: boolean;
+  autoComplete?: 'email' | 'password' | 'name' | 'off';
+  textContentType?: 'emailAddress' | 'password' | 'name' | 'username';
   error?: string;
   disabled?: boolean;
   multiline?: boolean;
@@ -31,7 +33,7 @@ interface InputProps {
   onRightIconPress?: () => void;
 }
 
-export const Input: React.FC<InputProps> = ({
+export const Input: React.FC<InputProps> = memo(({
   label,
   value,
   onChangeText,
@@ -40,6 +42,8 @@ export const Input: React.FC<InputProps> = ({
   keyboardType = 'default',
   autoCapitalize = 'none',
   autoCorrect = false,
+  autoComplete = 'off',
+  textContentType,
   error,
   disabled = false,
   multiline = false,
@@ -52,6 +56,21 @@ export const Input: React.FC<InputProps> = ({
   onRightIconPress,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+
+  // Memoize handlers to prevent recreation on every render
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+  }, []);
+
+  const handleRightIconPress = useCallback(() => {
+    if (onRightIconPress) {
+      onRightIconPress();
+    }
+  }, [onRightIconPress]);
 
   const containerStyle = [
     styles.container,
@@ -84,22 +103,26 @@ export const Input: React.FC<InputProps> = ({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
           editable={!disabled}
           multiline={multiline}
           numberOfLines={multiline ? numberOfLines : 1}
           maxLength={maxLength}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           clearButtonMode="while-editing"
           returnKeyType="next"
           blurOnSubmit={false}
           accessible={true}
           accessibilityLabel={label || placeholder}
+          importantForAutofill="yes"
+          spellCheck={false}
         />
         {rightIcon && (
           <TouchableOpacity
             style={styles.rightIcon}
-            onPress={onRightIconPress}
+            onPress={handleRightIconPress}
             disabled={!onRightIconPress}
             activeOpacity={0.7}
           >
@@ -110,7 +133,10 @@ export const Input: React.FC<InputProps> = ({
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
-};
+});
+
+// Display name for debugging
+Input.displayName = 'Input';
 
 const styles = StyleSheet.create({
   wrapper: {

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import { ProfessionsAPI, type Profession } from '../../api/professions.api';
 import { Button, EyeIcon, Input, Select } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
+import { useDebouncedValidation, validationFunctions } from '../../hooks/useDebouncedValidation';
 import { 
   scale, 
   verticalScale, 
@@ -53,6 +54,14 @@ export default function RegisterScreen() {
     workplace: '',
     department: '',
   });
+
+  // Setup debounced validation
+  const { debouncedValidate: debouncedNameValidate } = 
+    useDebouncedValidation(validationFunctions.name, 300);
+  const { debouncedValidate: debouncedEmailValidate } = 
+    useDebouncedValidation(validationFunctions.email, 500);
+  const { debouncedValidate: debouncedPasswordValidate } = 
+    useDebouncedValidation(validationFunctions.password, 300);
 
   const { register, isLoading, error, clearError } = useAuth();
 
@@ -215,12 +224,63 @@ export default function RegisterScreen() {
     return isValid;
   };
 
-  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
+  // Memoized handlers for better performance
+  const handleNameChange = useCallback((text: string) => {
+    setFormData(prev => ({ ...prev, name: text }));
+    if (errors.name && text.length > 0) {
+      setErrors(prev => ({ ...prev, name: '' }));
+    }
+    debouncedNameValidate(text, (error) => {
+      setErrors(prev => ({ ...prev, name: error }));
+    });
+  }, [errors.name, debouncedNameValidate]);
+
+  const handleEmailChange = useCallback((text: string) => {
+    setFormData(prev => ({ ...prev, email: text }));
+    if (errors.email && text.length > 0) {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+    debouncedEmailValidate(text, (error) => {
+      setErrors(prev => ({ ...prev, email: error }));
+    });
+  }, [errors.email, debouncedEmailValidate]);
+
+  const handlePasswordChange = useCallback((text: string) => {
+    setFormData(prev => ({ ...prev, password: text }));
+    if (errors.password && text.length > 0) {
+      setErrors(prev => ({ ...prev, password: '' }));
+    }
+    debouncedPasswordValidate(text, (error) => {
+      setErrors(prev => ({ ...prev, password: error }));
+    });
+  }, [errors.password, debouncedPasswordValidate]);
+
+  const handleConfirmPasswordChange = useCallback((text: string) => {
+    setFormData(prev => ({ ...prev, confirmPassword: text }));
+    if (errors.confirmPassword && text.length > 0) {
+      setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    }
+    // Validate confirm password immediately when it changes
+    if (text && formData.password) {
+      const error = validationFunctions.confirmPassword(formData.password, text);
+      setErrors(prev => ({ ...prev, confirmPassword: error }));
+    }
+  }, [errors.confirmPassword, formData.password]);
+
+  const handleInputChange = useCallback((field: keyof typeof formData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  };
+  }, [errors]);
+
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
+
+  const handleToggleConfirmPassword = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+  }, []);
 
   const handleRegister = async () => {
     clearError();
@@ -255,19 +315,27 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = useCallback(() => {
     router.push('/auth/login');
-  };
+  }, [router]);
+
+  // Memoize style objects to prevent recreation
+  const keyboardAvoidingViewStyle = useMemo(() => styles.container, []);
+  const scrollViewContentStyle = useMemo(() => styles.scrollContent, []);
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={keyboardAvoidingViewStyle}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollViewContentStyle}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
+        nestedScrollEnabled={false}
       >
         <View style={styles.content}>
           <View style={styles.header}>
@@ -279,28 +347,38 @@ export default function RegisterScreen() {
             <Input
               label="Họ và tên đầy đủ"
               value={formData.name}
-              onChangeText={(value) => handleInputChange('name', value)}
+              onChangeText={handleNameChange}
               placeholder="Nhập tên đầy đủ của bạn"
               autoCapitalize="words"
+              autoCorrect={false}
+              autoComplete="name"
+              textContentType="name"
               error={errors.name}
             />
 
             <Input
               label="Email"
               value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
+              onChangeText={handleEmailChange}
               placeholder="Nhập email của bạn"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
               error={errors.email}
             />
 
             <Input
               label="Password"
               value={formData.password}
-              onChangeText={(value) => handleInputChange('password', value)}
+              onChangeText={handlePasswordChange}
               placeholder="Tạo mật khẩu mạnh"
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              textContentType="password"
               error={errors.password}
               rightIcon={
                 <EyeIcon
@@ -308,15 +386,19 @@ export default function RegisterScreen() {
                   color={Colors.text.secondary}
                 />
               }
-              onRightIconPress={() => setShowPassword(!showPassword)}
+              onRightIconPress={handleTogglePassword}
             />
 
             <Input
               label="Xác nhận mật khẩu"
               value={formData.confirmPassword}
-              onChangeText={(value) => handleInputChange('confirmPassword', value)}
+              onChangeText={handleConfirmPasswordChange}
               placeholder="Xác nhận mật khẩu của bạn"
               secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              textContentType="password"
               error={errors.confirmPassword}
               rightIcon={
                 <EyeIcon
@@ -324,7 +406,7 @@ export default function RegisterScreen() {
                   color={Colors.text.secondary}
                 />
               }
-              onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              onRightIconPress={handleToggleConfirmPassword}
             />
 
             <Select

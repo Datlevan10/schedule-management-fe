@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
 import { Button, EyeIcon, Input } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
+import { useDebouncedValidation, validationFunctions } from '../../hooks/useDebouncedValidation';
 import { 
   scale, 
   verticalScale, 
@@ -32,38 +33,53 @@ export default function LoginScreen() {
 
   const { login, isLoading, error, clearError } = useAuth();
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Setup debounced validation
+  const { debouncedValidate: debouncedEmailValidate, clearValidation: clearEmailValidation } = 
+    useDebouncedValidation(validationFunctions.email, 500);
+  const { debouncedValidate: debouncedPasswordValidate, clearValidation: clearPasswordValidation } = 
+    useDebouncedValidation(validationFunctions.password, 300);
 
-  const validateForm = () => {
-    let isValid = true;
-
-    if (!email) {
-      setEmailError('Email là bắt buộc');
-      isValid = false;
-    } else if (!validateEmail(email)) {
-      setEmailError('Vui lòng nhập email hợp lệ');
-      isValid = false;
-    } else {
+  // Memoized handlers to prevent recreation on every render
+  const handleEmailChange = useCallback((text: string) => {
+    setEmail(text);
+    // Clear error immediately if user starts typing
+    if (emailError && text.length > 0) {
       setEmailError('');
     }
+    // Debounced validation
+    debouncedEmailValidate(text, setEmailError);
+  }, [emailError, debouncedEmailValidate]);
 
-    if (!password) {
-      setPasswordError('Mật khẩu là bắt buộc');
-      isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
-      isValid = false;
-    } else {
+  const handlePasswordChange = useCallback((text: string) => {
+    setPassword(text);
+    // Clear error immediately if user starts typing
+    if (passwordError && text.length > 0) {
       setPasswordError('');
     }
+    // Debounced validation
+    debouncedPasswordValidate(text, setPasswordError);
+  }, [passwordError, debouncedPasswordValidate]);
 
-    return isValid;
-  };
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
 
-  const handleLogin = async () => {
+  // Final validation for form submission
+  const validateForm = useCallback(() => {
+    // Clear any pending validations
+    clearEmailValidation();
+    clearPasswordValidation();
+    
+    const emailErr = validationFunctions.email(email);
+    const passwordErr = validationFunctions.password(password);
+    
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+    
+    return !emailErr && !passwordErr;
+  }, [email, password, clearEmailValidation, clearPasswordValidation]);
+
+  const handleLogin = useCallback(async () => {
     clearError();
 
     if (!validateForm()) return;
@@ -75,25 +91,32 @@ export default function LoginScreen() {
     } else {
       Alert.alert('Đăng nhập không thành công', result.error || 'Vui lòng thử lại');
     }
-  };
+  }, [clearError, validateForm, login, email, password, router]);
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = useCallback(() => {
     router.push('/auth/forgot-password');
-  };
+  }, [router]);
 
-  const handleSignUp = () => {
+  const handleSignUp = useCallback(() => {
     router.push('/auth/register');
-  };
+  }, [router]);
+
+  // Memoize style objects to prevent recreation
+  const keyboardAvoidingViewStyle = useMemo(() => styles.container, []);
+  const scrollViewContentStyle = useMemo(() => styles.scrollContent, []);
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={keyboardAvoidingViewStyle}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollViewContentStyle}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         <View style={styles.content}>
           <View style={styles.header}>
@@ -105,19 +128,26 @@ export default function LoginScreen() {
             <Input
               label="Email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={handleEmailChange}
               placeholder="Nhập email của bạn"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
               error={emailError}
             />
 
             <Input
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={handlePasswordChange}
               placeholder="Nhập mật khẩu của bạn"
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              textContentType="password"
               error={passwordError}
               rightIcon={
                 <EyeIcon
@@ -125,7 +155,7 @@ export default function LoginScreen() {
                   color={Colors.text.secondary}
                 />
               }
-              onRightIconPress={() => setShowPassword(!showPassword)}
+              onRightIconPress={handleTogglePassword}
             />
 
             <TouchableOpacity

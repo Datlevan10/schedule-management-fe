@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 import { UserAPI, UserProfile } from '../../api/user.api';
 import { Button, Card } from '../../components/common';
 import { Colors, Typography } from '../../constants';
+import { useAuth } from '../../hooks';
 import {
   deviceSpecific,
   getSafeAreaInsets,
@@ -33,63 +34,111 @@ export default function ProfileScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
+  
+  // Get user data from useAuth hook (for user ID)
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    loadUserProfile();
-  }, []);
+    // Load profile - for now, use a hardcoded user ID since we don't need authentication
+    // You can later modify this to get user ID from navigation params or other source
+    const userId = user?.id || 3; // Default to user ID 3 as per your example
+    console.log('✅ Loading profile for user ID:', userId);
+    loadUserProfile(userId);
+  }, [user?.id]);
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async (userId: number) => {
     try {
       setLoading(true);
-      const response = await UserAPI.getUserProfile();
+      console.log('🔍 Loading user profile for user ID:', userId);
+      
+      // Use the /users/{id} endpoint with user ID
+      const response = await UserAPI.getUserProfile(userId);
+      
+      console.log('📦 Profile API Response:', response);
+      
       if (response.success && response.data) {
         setUserProfile(response.data);
         setNotifications(response.data.notification_preferences?.push_notifications ?? true);
+        console.log('✅ User profile loaded successfully');
+      } else {
+        throw new Error('Invalid response format from server');
       }
     } catch (error: any) {
-      console.error('Error loading user profile:', error);
-      // If user ID not found, user might not be properly logged in
-      if (error.message === 'User ID not found') {
+      console.error('❌ Error loading user profile:', error);
+      
+      // Handle different types of errors without redirecting to login
+      if (error.response?.status === 404) {
         Alert.alert(
-          'Authentication Required',
-          'Please log in again to view your profile.',
-          [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+          'Không tìm thấy người dùng',
+          'Không thể tìm thấy hồ sơ người dùng.',
+          [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Thử lại', onPress: () => loadUserProfile(userId) }
+          ]
+        );
+      } else if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+        Alert.alert(
+          'Lỗi kết nối',
+          'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối internet.',
+          [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Thử lại', onPress: () => loadUserProfile(userId) }
+          ]
         );
       } else {
-        Alert.alert('Error', 'Failed to load user profile');
+        Alert.alert(
+          'Lỗi',
+          'Không thể tải hồ sơ người dùng. Vui lòng thử lại.',
+          [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Thử lại', onPress: () => loadUserProfile(userId) }
+          ]
+        );
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Hủy', style: 'cancel' },
         {
-          text: 'Logout',
+          text: 'Đăng xuất',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.clear();
-            router.replace('/auth/login');
+            try {
+              console.log('🚪 Logging out user...');
+              
+              // Clear user data from auth hook
+              await logout();
+              
+              console.log('✅ Logout successful');
+              router.replace('/auth/login');
+            } catch (error) {
+              console.error('❌ Logout error:', error);
+              // Even if logout fails, clear local storage and redirect
+              await AsyncStorage.clear();
+              router.replace('/auth/login');
+            }
           },
         },
       ]
     );
-  };
+  }, [logout]);
 
   const menuItems = [
-    { icon: '👤', title: 'Edit Profile', action: () => router.push('/profile/edit-profile') },
-    { icon: '🔔', title: 'Notification Settings', action: () => router.push('/profile/notification-settings') },
-    { icon: '🔒', title: 'Privacy & Security', action: () => router.push('/profile/privacy-security') },
-    { icon: '📊', title: 'Activity Reports', action: () => router.push('/profile/activity-reports') },
-    { icon: '💾', title: 'Backup & Sync', action: () => router.push('/profile/backup-sync') },
-    { icon: '❓', title: 'Help & Support', action: () => router.push('/profile/help-support') },
-    { icon: '📜', title: 'Terms of Service', action: () => router.push('/profile/terms-of-service') },
-    { icon: 'ℹ️', title: 'About', action: () => router.push('/profile/about') },
+    { icon: '👤', title: 'Chỉnh sửa hồ sơ', action: () => router.push('/profile/edit-profile') },
+    { icon: '🔔', title: 'Cài đặt thông báo', action: () => router.push('/profile/notification-settings') },
+    { icon: '🔒', title: 'Quyền riêng tư & Bảo mật', action: () => router.push('/profile/privacy-security') },
+    { icon: '📊', title: 'Báo cáo hoạt động', action: () => router.push('/profile/activity-reports') },
+    { icon: '💾', title: 'Sao lưu & Đồng bộ', action: () => router.push('/profile/backup-sync') },
+    { icon: '❓', title: 'Hỗ trợ & Trợ giúp', action: () => router.push('/profile/help-support') },
+    { icon: '📜', title: 'Điều khoản dịch vụ', action: () => router.push('/profile/terms-of-service') },
+    { icon: 'ℹ️', title: 'Giới thiệu', action: () => router.push('/profile/about') },
   ];
 
   if (loading) {
@@ -103,8 +152,15 @@ export default function ProfileScreen() {
   if (!userProfile) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <Text style={styles.errorText}>Failed to load profile</Text>
-        <Button title="Retry" onPress={loadUserProfile} style={styles.retryButton} />
+        <Text style={styles.errorText}>Không thể tải hồ sơ</Text>
+        <Button 
+          title="Thử lại" 
+          onPress={() => {
+            const userId = user?.id || 3;
+            loadUserProfile(userId);
+          }} 
+          style={styles.retryButton} 
+        />
       </View>
     );
   }
@@ -134,27 +190,27 @@ export default function ProfileScreen() {
 
         <View style={styles.professionalInfo}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Profession:</Text>
+            <Text style={styles.infoLabel}>Nghề nghiệp:</Text>
             <Text style={styles.infoValue}>
               {userProfile.profession?.display_name} ({userProfile.profession?.level})
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Workplace:</Text>
+            <Text style={styles.infoLabel}>Nơi làm việc:</Text>
             <Text style={styles.infoValue}>{userProfile.workplace}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Department:</Text>
+            <Text style={styles.infoLabel}>Khoa/Phòng:</Text>
             <Text style={styles.infoValue}>{userProfile.department}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Work Schedule:</Text>
+            <Text style={styles.infoLabel}>Lịch làm việc:</Text>
             <Text style={styles.infoValue}>
               {userProfile.work_schedule?.join(', ')}
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Work Habits:</Text>
+            <Text style={styles.infoLabel}>Thói quen làm việc:</Text>
             <Text style={styles.infoValue}>
               {userProfile.work_habits?.join(', ')}
             </Text>
@@ -163,12 +219,12 @@ export default function ProfileScreen() {
       </Card>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Settings</Text>
+        <Text style={styles.sectionTitle}>Cài đặt nhanh</Text>
         <Card style={styles.settingsCard}>
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Text style={styles.settingIcon}>🌙</Text>
-              <Text style={styles.settingText}>Dark Mode</Text>
+              <Text style={styles.settingText}>Chế độ tối</Text>
             </View>
             <Switch
               value={darkMode}
@@ -181,7 +237,7 @@ export default function ProfileScreen() {
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Text style={styles.settingIcon}>🔔</Text>
-              <Text style={styles.settingText}>Push Notifications</Text>
+              <Text style={styles.settingText}>Thông báo đẩy</Text>
             </View>
             <Switch
               value={notifications}
@@ -194,7 +250,7 @@ export default function ProfileScreen() {
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
               <Text style={styles.settingIcon}>☁️</Text>
-              <Text style={styles.settingText}>Auto-Sync</Text>
+              <Text style={styles.settingText}>Tự động đồng bộ</Text>
             </View>
             <Switch
               value={autoSync}
@@ -207,7 +263,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text style={styles.sectionTitle}>Tài khoản</Text>
         <Card style={styles.menuCard}>
           {menuItems.map((item, index) => (
             <React.Fragment key={index}>
@@ -231,7 +287,7 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.footer}>
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.version}>Phiên bản 1.0.0</Text>
       </View>
     </ScrollView>
   );

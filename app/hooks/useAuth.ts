@@ -25,14 +25,21 @@ export const useAuth = () => {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 Checking auth status...');
       const token = await AsyncStorage.getItem(StorageKeys.AUTH.TOKEN);
       const userDataString = await AsyncStorage.getItem(StorageKeys.AUTH.USER_DATA);
       
+      console.log('📱 Token exists:', !!token);
+      console.log('📱 User data exists:', !!userDataString);
+      
       if (token && userDataString) {
         const userData = JSON.parse(userDataString);
+        console.log('👤 Stored user data:', userData.id);
         
         try {
+          console.log('🔐 Verifying token...');
           await AuthAPI.verifyToken();
+          console.log('✅ Token verified successfully');
           setState({
             user: userData,
             isAuthenticated: true,
@@ -40,15 +47,18 @@ export const useAuth = () => {
             error: null,
           });
         } catch (error) {
+          console.log('❌ Token verification failed:', error);
           await logout();
         }
       } else {
+        console.log('❌ No token or user data found');
         setState(prev => ({
           ...prev,
           isLoading: false,
         }));
       }
     } catch (error) {
+      console.log('❌ Error checking auth status:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -72,6 +82,12 @@ export const useAuth = () => {
       console.log('👤 User Data:', JSON.stringify(response.data.data.user, null, 2));
       console.log('🆔 User ID:', response.data.data.user.id);
       
+      // Verify that the token was stored properly after AuthAPI.login call
+      const storedToken = await AsyncStorage.getItem(StorageKeys.AUTH.TOKEN);
+      const storedUserData = await AsyncStorage.getItem(StorageKeys.AUTH.USER_DATA);
+      console.log('💾 Token stored after login:', !!storedToken);
+      console.log('💾 User data stored after login:', !!storedUserData);
+      
       // Store user role if provided
       if (credentials.role) {
         await AsyncStorage.setItem('userRole', credentials.role);
@@ -84,6 +100,7 @@ export const useAuth = () => {
         error: null,
       });
 
+      console.log('✅ Login state updated - isAuthenticated:', true);
       return { success: true };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed';
