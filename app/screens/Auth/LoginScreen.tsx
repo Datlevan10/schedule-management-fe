@@ -13,6 +13,15 @@ import {
 import { Button, EyeIcon, Input } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
+import { 
+  scale, 
+  verticalScale, 
+  moderateScale,
+  responsiveFontSize,
+  spacing,
+  getSafeAreaInsets,
+  isSmallDevice,
+} from '../../utils/responsive';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -150,6 +159,8 @@ export default function LoginScreen() {
   );
 }
 
+const safeAreaInsets = getSafeAreaInsets();
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -160,56 +171,66 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
+    paddingTop: safeAreaInsets.top + verticalScale(40),
+    paddingBottom: verticalScale(40),
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: verticalScale(40),
   },
   title: {
-    ...Typography.h1,
+    fontSize: responsiveFontSize['4xl'],
+    fontWeight: Typography.h1.fontWeight,
+    lineHeight: moderateScale(Typography.h1.lineHeight),
     color: Colors.text.primary,
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   subtitle: {
-    ...Typography.body1,
+    fontSize: responsiveFontSize.lg,
+    fontWeight: Typography.body1.fontWeight,
+    lineHeight: moderateScale(Typography.body1.lineHeight),
     color: Colors.text.secondary,
     textAlign: 'center',
+    paddingHorizontal: spacing.md,
   },
   form: {
     flex: 1,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
+    padding: scale(8),
   },
   forgotPasswordText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
+    fontWeight: Typography.body2.fontWeight,
     color: Colors.primary,
   },
   loginButton: {
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
+    height: scale(48),
   },
   errorText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
+    fontWeight: Typography.body2.fontWeight,
     color: Colors.danger,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: verticalScale(8),
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: verticalScale(32),
   },
   footerText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
+    fontWeight: Typography.body2.fontWeight,
     color: Colors.text.secondary,
   },
   signUpText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.primary,
     fontWeight: '600',
   },

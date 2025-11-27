@@ -14,6 +14,17 @@ import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/sche
 import { Card } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
+import { 
+  scale, 
+  verticalScale, 
+  moderateScale,
+  responsiveFontSize,
+  spacing,
+  getSafeAreaInsets,
+  isSmallDevice,
+  wp,
+  hp,
+} from '../../utils/responsive';
 
 const professionIcons: Record<string, string> = {
   'doctor': '👨‍⚕️',
@@ -236,6 +247,8 @@ export default function HomeScreen() {
   );
 }
 
+const safeAreaInsets = getSafeAreaInsets();
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -245,82 +258,84 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
+    paddingTop: safeAreaInsets.top + verticalScale(20),
+    paddingBottom: verticalScale(20),
   },
   welcomeText: {
-    ...Typography.body1,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
   },
   userName: {
-    ...Typography.h2,
+    fontSize: responsiveFontSize['2xl'],
+    fontWeight: '600',
     color: Colors.text.primary,
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
     backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   notificationIcon: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
   },
   quickStats: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 12,
+    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
+    marginBottom: verticalScale(24),
+    gap: scale(12),
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: verticalScale(16),
   },
   statNumber: {
-    ...Typography.h3,
+    fontSize: responsiveFontSize.xl,
     color: Colors.primary,
     fontWeight: 'bold',
   },
   statLabel: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.secondary,
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
   section: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
+    paddingBottom: verticalScale(20),
   },
   sectionTitle: {
-    ...Typography.h3,
+    fontSize: responsiveFontSize.xl,
+    fontWeight: '600',
     color: Colors.text.primary,
-    marginBottom: 4,
+    marginBottom: verticalScale(4),
   },
   sectionSubtitle: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   categoryList: {
-    marginBottom: 16,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
+    marginBottom: verticalScale(16),
+    marginHorizontal: isSmallDevice() ? -spacing.md : -spacing.lg,
+    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: Colors.background.secondary,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   categoryChipActive: {
     backgroundColor: Colors.primary,
   },
   categoryChipText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
   },
   categoryChipTextActive: {
@@ -328,38 +343,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   templateList: {
-    paddingBottom: 20,
+    paddingBottom: verticalScale(20),
   },
   templateCard: {
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
+    padding: scale(16),
+    marginBottom: verticalScale(12),
+    borderLeftWidth: scale(4),
   },
   templateHeader: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   templateIcon: {
-    fontSize: 28,
-    marginRight: 12,
+    fontSize: moderateScale(28),
+    marginRight: scale(12),
   },
   templateInfo: {
     flex: 1,
   },
   templateName: {
-    ...Typography.body1,
+    fontSize: responsiveFontSize.lg,
     color: Colors.text.primary,
     fontWeight: '600',
   },
   templateCategory: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.secondary,
-    marginTop: 2,
+    marginTop: verticalScale(2),
   },
   templateDescription: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
   templateFooter: {
     flexDirection: 'row',
@@ -367,59 +382,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scheduleItems: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.tertiary,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   downloadButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(16),
   },
   downloadButtonText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: '#FFFFFF',
     fontWeight: '600',
   },
   loadingContainer: {
-    paddingVertical: 40,
+    paddingVertical: verticalScale(40),
     alignItems: 'center',
   },
   loadingText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
-    marginTop: 12,
+    marginTop: verticalScale(12),
   },
   errorContainer: {
-    paddingVertical: 40,
+    paddingVertical: verticalScale(40),
     alignItems: 'center',
   },
   errorText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.danger,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
     backgroundColor: Colors.primary,
-    borderRadius: 20,
+    borderRadius: scale(20),
   },
   retryButtonText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: '#FFFFFF',
     fontWeight: '600',
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: verticalScale(40),
     alignItems: 'center',
   },
   emptyText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.secondary,
   },
 });

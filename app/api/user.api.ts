@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from './index';
-import { StorageKeys } from '../constants';
+import { StorageKeys } from "../constants";
+import api from "./index";
 
 export interface Profession {
   id: number;
@@ -50,13 +50,13 @@ export interface User {
 }
 
 export interface UserPreferences {
-  defaultCalendarView: 'day' | 'week' | 'month';
+  defaultCalendarView: "day" | "week" | "month";
   workingHours: {
     start: string;
     end: string;
   };
   reminderDefaults: string[];
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   notifications: {
     email: boolean;
     push: boolean;
@@ -80,36 +80,39 @@ export interface ChangePasswordRequest {
 
 export const UserAPI = {
   getProfile: async () => {
-    return api.get<User>('/user/profile');
+    return api.get<User>("/user/profile");
   },
 
   getUserProfile: async (userId?: number): Promise<UserProfileResponse> => {
     try {
-      let userIdToFetch = userId;
-      
-      if (!userIdToFetch) {
-        const userData = await AsyncStorage.getItem(StorageKeys.AUTH.USER_DATA);
-        if (userData) {
-          const parsed = JSON.parse(userData);
-          userIdToFetch = parsed.id;
-        }
+      if (userId) {
+        // If specific user ID is provided, fetch that user's details
+        console.log('🚀 Making API call with specific user ID:', userId);
+        const response = await api.get<UserProfileResponse>(
+          `/users/${userId}`
+        );
+        return response.data;
+      } else {
+        // If no user ID provided, fetch current authenticated user's profile
+        console.log('🚀 Fetching current user profile from /auth/me');
+        const response = await api.get<UserProfileResponse>('/auth/me');
+        return response.data;
       }
-      
-      if (!userIdToFetch) {
-        throw new Error('User ID not found');
-      }
-      
-      const response = await api.get<UserProfileResponse>(`/users/${userIdToFetch}`);
-      return response.data;
     } catch (error) {
       console.error("Error fetching user profile:", error);
       throw error;
     }
   },
 
-  updateUserProfile: async (userId: number, data: Partial<UserProfile>): Promise<UserProfileResponse> => {
+  updateUserProfile: async (
+    userId: number,
+    data: Partial<UserProfile>
+  ): Promise<UserProfileResponse> => {
     try {
-      const response = await api.put<UserProfileResponse>(`/users/${userId}`, data);
+      const response = await api.put<UserProfileResponse>(
+        `/users/${userId}`,
+        data
+      );
       return response.data;
     } catch (error) {
       console.error("Error updating user profile:", error);
@@ -118,30 +121,30 @@ export const UserAPI = {
   },
 
   updateProfile: async (data: UpdateProfileRequest) => {
-    return api.put<User>('/user/profile', data);
+    return api.put<User>("/user/profile", data);
   },
 
   uploadAvatar: async (file: FormData) => {
-    return api.post<{ url: string }>('/user/avatar', file, {
+    return api.post<{ url: string }>("/user/avatar", file, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
   },
 
   changePassword: async (data: ChangePasswordRequest) => {
-    return api.post('/user/change-password', data);
+    return api.post("/user/change-password", data);
   },
 
   deleteAccount: async () => {
-    return api.delete('/user/account');
+    return api.delete("/user/account");
   },
 
   getActivityStats: async () => {
-    return api.get('/user/activity-stats');
+    return api.get("/user/activity-stats");
   },
 
   updatePreferences: async (preferences: Partial<UserPreferences>) => {
-    return api.put<User>('/user/preferences', preferences);
+    return api.put<User>("/user/preferences", preferences);
   },
 };

@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { scale, moderateScale, deviceSpecific } from '../../utils/responsive';
 
 interface ButtonProps {
   title: string;
@@ -71,11 +72,11 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 8,
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   primary: {
     backgroundColor: '#007AFF',
@@ -95,19 +96,19 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   smallSize: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minHeight: 32,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    minHeight: scale(36),
   },
   mediumSize: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 44,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    minHeight: deviceSpecific.buttonHeight(),
   },
   largeSize: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    minHeight: 52,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
+    minHeight: scale(52),
   },
   text: {
     fontWeight: '600',
@@ -128,12 +129,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   smallText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
   mediumText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   largeText: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
   },
 });

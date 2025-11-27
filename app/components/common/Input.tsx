@@ -8,6 +8,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { scale, moderateScale, verticalScale } from '../../utils/responsive';
 
 interface InputProps {
   label?: string;
@@ -113,29 +114,29 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   label: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '500',
     color: '#000000',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#D1D1D6',
-    borderRadius: 8,
+    borderRadius: scale(8),
     backgroundColor: '#FFFFFF',
-    minHeight: 44,
+    minHeight: scale(44),
   },
   focused: {
     borderColor: '#007AFF',
     shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 2,
   },
   error: {
@@ -147,33 +148,33 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#000000',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(12),
     zIndex: 1,
   },
   inputWithLeftIcon: {
-    paddingLeft: 8,
+    paddingLeft: scale(8),
   },
   inputWithRightIcon: {
-    paddingRight: 8,
+    paddingRight: scale(8),
   },
   multilineInput: {
-    minHeight: 80,
+    minHeight: verticalScale(80),
     textAlignVertical: 'top',
   },
   leftIcon: {
-    paddingLeft: 12,
-    paddingRight: 8,
+    paddingLeft: scale(12),
+    paddingRight: scale(8),
   },
   rightIcon: {
-    paddingRight: 12,
-    paddingLeft: 8,
+    paddingRight: scale(12),
+    paddingLeft: scale(8),
   },
   errorText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#FF3B30',
-    marginTop: 4,
+    marginTop: verticalScale(4),
   },
 });
