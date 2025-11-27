@@ -67,6 +67,11 @@ export const useAuth = () => {
     try {
       const response = await AuthAPI.login(credentials);
       
+      // Log the login response for debugging
+      console.log('🔐 Login Response:', JSON.stringify(response.data, null, 2));
+      console.log('👤 User Data:', JSON.stringify(response.data.data.user, null, 2));
+      console.log('🆔 User ID:', response.data.data.user.id);
+      
       // Store user role if provided
       if (credentials.role) {
         await AsyncStorage.setItem('userRole', credentials.role);

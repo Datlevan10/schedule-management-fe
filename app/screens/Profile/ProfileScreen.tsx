@@ -9,11 +9,22 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { UserAPI, UserProfile } from '../../api/user.api';
 import { Button, Card } from '../../components/common';
 import { Colors, Typography } from '../../constants';
+import {
+  deviceSpecific,
+  getSafeAreaInsets,
+  isIPhone7Plus,
+  isLargeDevice,
+  layoutHelpers,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  spacing
+} from '../../utils/responsive';
 
 
 export default function ProfileScreen() {
@@ -40,7 +51,7 @@ export default function ProfileScreen() {
       // If user ID not found, user might not be properly logged in
       if (error.message === 'User ID not found') {
         Alert.alert(
-          'Authentication Required', 
+          'Authentication Required',
           'Please log in again to view your profile.',
           [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
         );
@@ -226,6 +237,14 @@ export default function ProfileScreen() {
   );
 }
 
+// Get responsive layout properties
+const profileLayout = layoutHelpers.getProfileLayoutProps();
+const cardLayout = layoutHelpers.getCardLayoutProps();
+const buttonLayout = layoutHelpers.getButtonLayoutProps();
+const safeAreaInsets = getSafeAreaInsets();
+const isLarge = isLargeDevice();
+const iPhone7Plus = isIPhone7Plus();
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -236,95 +255,119 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: profileLayout.containerPadding,
+    paddingTop: safeAreaInsets.top + spacing.lg,
+    paddingBottom: spacing.md,
   },
   title: {
-    ...Typography.h2,
+    fontSize: responsiveFontSize['3xl'],
+    fontWeight: Typography.h2.fontWeight,
+    lineHeight: moderateScale(Typography.h2.lineHeight),
     color: Colors.text.primary,
   },
   errorText: {
-    ...Typography.body1,
+    fontSize: responsiveFontSize.lg,
+    fontWeight: Typography.body1.fontWeight,
+    lineHeight: moderateScale(Typography.body1.lineHeight),
     color: Colors.danger,
-    marginBottom: 16,
+    marginBottom: spacing.md,
+    textAlign: 'center',
   },
   retryButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
+    height: deviceSpecific.buttonHeight(),
   },
   profileCard: {
-    marginHorizontal: 20,
-    padding: 20,
-    marginBottom: 20,
+    marginHorizontal: profileLayout.cardMargin,
+    padding: iPhone7Plus ? spacing.xl : spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: cardLayout.borderRadius,
+    backgroundColor: Colors.background.primary,
+    shadowColor: Colors.shadow.light,
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.1,
+    shadowRadius: cardLayout.shadowRadius,
+    elevation: cardLayout.elevation,
   },
   profileHeader: {
     flexDirection: 'row',
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: profileLayout.avatarSize,
+    height: profileLayout.avatarSize,
+    borderRadius: profileLayout.avatarSize / 2,
     backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   avatarEmoji: {
-    fontSize: 40,
+    fontSize: moderateScale(isLarge ? 45 : 35),
   },
   profileInfo: {
     flex: 1,
     justifyContent: 'center',
+    maxWidth: profileLayout.profileInfoWidth,
   },
   userName: {
-    ...Typography.h3,
+    fontSize: responsiveFontSize.xl,
+    fontWeight: Typography.h3.fontWeight,
+    lineHeight: moderateScale(Typography.h3.lineHeight),
     color: Colors.text.primary,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   userEmail: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
+    fontWeight: Typography.body2.fontWeight,
+    lineHeight: moderateScale(Typography.body2.lineHeight),
     color: Colors.text.secondary,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   joinDate: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
+    fontWeight: Typography.body2.fontWeight,
+    lineHeight: moderateScale(16),
     color: Colors.text.tertiary,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
+    marginVertical: scale(4),
   },
   verifiedText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.success,
     fontWeight: '600',
   },
   professionalInfo: {
-    marginTop: 20,
-    paddingTop: 20,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
   },
   infoRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
+    flexDirection: isLarge ? 'row' : 'column',
+    marginBottom: iPhone7Plus ? spacing.md : scale(10),
+    alignItems: isLarge ? 'center' : 'flex-start',
   },
   infoLabel: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.secondary,
     fontWeight: '600',
-    width: 120,
+    width: isLarge ? scale(120) : 'auto',
+    marginBottom: isLarge ? 0 : scale(2),
   },
   infoValue: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.primary,
-    flex: 1,
+    flex: isLarge ? 1 : 0,
+    lineHeight: moderateScale(18),
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingTop: 20,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
   },
@@ -333,98 +376,125 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNumber: {
-    ...Typography.h3,
+    fontSize: responsiveFontSize.xl,
     color: Colors.primary,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   statLabel: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.secondary,
   },
   statDivider: {
     width: 1,
     backgroundColor: Colors.border.light,
-    marginVertical: 4,
+    marginVertical: scale(4),
   },
   section: {
-    marginBottom: 20,
+    marginBottom: profileLayout.sectionSpacing,
   },
   sectionTitle: {
-    ...Typography.body1,
+    fontSize: responsiveFontSize.lg,
     color: Colors.text.primary,
     fontWeight: '600',
-    marginBottom: 12,
-    paddingHorizontal: 20,
+    marginBottom: spacing.sm,
+    paddingHorizontal: profileLayout.containerPadding,
   },
   settingsCard: {
-    marginHorizontal: 20,
+    marginHorizontal: profileLayout.cardMargin,
     padding: 0,
     overflow: 'hidden',
+    borderRadius: cardLayout.borderRadius,
+    backgroundColor: Colors.background.primary,
+    shadowColor: Colors.shadow.light,
+    shadowOffset: { width: 0, height: scale(1) },
+    shadowOpacity: 0.1,
+    shadowRadius: cardLayout.shadowRadius,
+    elevation: cardLayout.elevation,
   },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: iPhone7Plus ? spacing.md + scale(2) : spacing.sm + scale(2),
+    paddingHorizontal: profileLayout.menuItemPadding,
+    minHeight: scale(48),
   },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   settingIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    fontSize: moderateScale(18),
+    marginRight: spacing.sm,
+    width: scale(24),
+    textAlign: 'center',
   },
   settingText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.primary,
+    flex: 1,
   },
   menuCard: {
-    marginHorizontal: 20,
+    marginHorizontal: profileLayout.cardMargin,
     padding: 0,
     overflow: 'hidden',
+    borderRadius: cardLayout.borderRadius,
+    backgroundColor: Colors.background.primary,
+    shadowColor: Colors.shadow.light,
+    shadowOffset: { width: 0, height: scale(1) },
+    shadowOpacity: 0.1,
+    shadowRadius: cardLayout.shadowRadius,
+    elevation: cardLayout.elevation,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: iPhone7Plus ? spacing.md + scale(2) : spacing.sm + scale(2),
+    paddingHorizontal: profileLayout.menuItemPadding,
+    minHeight: scale(48),
   },
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   menuIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    fontSize: moderateScale(18),
+    marginRight: spacing.sm,
+    width: scale(24),
+    textAlign: 'center',
   },
   menuText: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.base,
     color: Colors.text.primary,
+    flex: 1,
   },
   menuArrow: {
-    fontSize: 20,
+    fontSize: moderateScale(16),
     color: Colors.text.tertiary,
   },
   divider: {
     height: 1,
     backgroundColor: Colors.border.light,
-    marginHorizontal: 16,
+    marginHorizontal: profileLayout.menuItemPadding,
   },
   logoutButton: {
-    marginHorizontal: 20,
+    marginHorizontal: profileLayout.cardMargin,
     backgroundColor: '#EF4444',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
+    height: deviceSpecific.buttonHeight(),
+    borderRadius: buttonLayout.borderRadius,
+    justifyContent: 'center',
   },
   footer: {
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: spacing.xxl + safeAreaInsets.bottom,
   },
   version: {
-    ...Typography.body2,
+    fontSize: responsiveFontSize.sm,
     color: Colors.text.tertiary,
   },
 });

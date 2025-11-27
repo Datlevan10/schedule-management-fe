@@ -6,6 +6,7 @@ import {
   ViewStyle,
   GestureResponderEvent,
 } from 'react-native';
+import { scale } from '../../utils/responsive';
 
 interface CardProps {
   children: React.ReactNode;
@@ -49,21 +50,21 @@ export const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
+    borderRadius: scale(12),
     backgroundColor: '#FFFFFF',
   },
   default: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: scale(1) },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: scale(3),
     elevation: 2,
   },
   elevated: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 6,
   },
   outlined: {
@@ -79,12 +80,12 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   smallPadding: {
-    padding: 8,
+    padding: scale(8),
   },
   mediumPadding: {
-    padding: 16,
+    padding: scale(16),
   },
   largePadding: {
-    padding: 24,
+    padding: scale(24),
   },
 });
