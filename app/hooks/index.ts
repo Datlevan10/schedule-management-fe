@@ -1,4 +1,5 @@
 export { useAuth } from './useAuth';
+export { useDebouncedValidation, validationFunctions } from './useDebouncedValidation';
 export { useFetch, useMutation, usePagination } from './useFetch';
 export { 
   useSchedule, 

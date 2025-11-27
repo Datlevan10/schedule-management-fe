@@ -83,21 +83,14 @@ export const UserAPI = {
     return api.get<User>("/user/profile");
   },
 
-  getUserProfile: async (userId?: number): Promise<UserProfileResponse> => {
+  getUserProfile: async (userId: number): Promise<UserProfileResponse> => {
     try {
-      if (userId) {
-        // If specific user ID is provided, fetch that user's details
-        console.log('🚀 Making API call with specific user ID:', userId);
-        const response = await api.get<UserProfileResponse>(
-          `/users/${userId}`
-        );
-        return response.data;
-      } else {
-        // If no user ID provided, fetch current authenticated user's profile
-        console.log('🚀 Fetching current user profile from /auth/me');
-        const response = await api.get<UserProfileResponse>('/auth/me');
-        return response.data;
-      }
+      // Always fetch user profile using the user ID endpoint
+      console.log('🚀 Making API call with user ID:', userId);
+      const response = await api.get<UserProfileResponse>(
+        `/users/${userId}`
+      );
+      return response.data;
     } catch (error) {
       console.error("Error fetching user profile:", error);
       throw error;
