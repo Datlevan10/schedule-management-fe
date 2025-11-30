@@ -2,14 +2,14 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Colors, Typography } from '../constants';
 
-export default function NotificationsScreen() {
+export default function AdminManagementScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>System Notifications</Text>
+        <Text style={styles.title}>Admin Management</Text>
       </View>
       <View style={styles.card}>
-        <Text style={styles.text}>Notification management coming soon...</Text>
+        <Text style={styles.text}>Admin management features coming soon...</Text>
       </View>
     </ScrollView>
   );

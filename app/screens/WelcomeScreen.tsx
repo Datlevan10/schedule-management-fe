@@ -72,11 +72,16 @@ export default function WelcomeScreen() {
       };
       return fallbackData;
     } catch (error: any) {
-      console.error('Error loading welcome data from API:', error);
+      // Only log error if it's not a 404 (endpoint not found)
+      if (error?.response?.status !== 404) {
+        console.error('Error loading welcome data from API:', error);
+      }
 
       // Check if it's an authentication error
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         console.log('🔐 Welcome screen API requires authentication, using fallback data');
+      } else if (error?.response?.status === 404) {
+        console.log('📱 Welcome screen API not available, using default welcome screen');
       }
 
       // Fallback data when API fails (using data from your API example)
@@ -178,13 +183,13 @@ export default function WelcomeScreen() {
         visible={showRoleModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => {}}
+        onRequestClose={() => { }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Chọn loại tài khoản</Text>
             <Text style={styles.modalSubtitle}>Bạn muốn đăng nhập với vai trò nào?</Text>
-            
+
             <TouchableOpacity
               style={[styles.roleButton, styles.customerButton]}
               onPress={() => handleRoleSelection('customer')}

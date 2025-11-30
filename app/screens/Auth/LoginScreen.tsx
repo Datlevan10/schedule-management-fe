@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,21 +7,22 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, EyeIcon, Input } from '../../components/common';
+import { Button, EyeIcon } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 import { useDebouncedValidation, validationFunctions } from '../../hooks/useDebouncedValidation';
-import { 
-  scale, 
-  verticalScale, 
-  moderateScale,
-  responsiveFontSize,
-  spacing,
+import {
   getSafeAreaInsets,
   isSmallDevice,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  spacing,
+  verticalScale,
 } from '../../utils/responsive';
 
 export default function LoginScreen() {
@@ -34,9 +35,9 @@ export default function LoginScreen() {
   const { login, isLoading, error, clearError } = useAuth();
 
   // Setup debounced validation
-  const { debouncedValidate: debouncedEmailValidate, clearValidation: clearEmailValidation } = 
+  const { debouncedValidate: debouncedEmailValidate, clearValidation: clearEmailValidation } =
     useDebouncedValidation(validationFunctions.email, 500);
-  const { debouncedValidate: debouncedPasswordValidate, clearValidation: clearPasswordValidation } = 
+  const { debouncedValidate: debouncedPasswordValidate, clearValidation: clearPasswordValidation } =
     useDebouncedValidation(validationFunctions.password, 300);
 
   // Memoized handlers to prevent recreation on every render
@@ -69,13 +70,13 @@ export default function LoginScreen() {
     // Clear any pending validations
     clearEmailValidation();
     clearPasswordValidation();
-    
+
     const emailErr = validationFunctions.email(email);
     const passwordErr = validationFunctions.password(password);
-    
+
     setEmailError(emailErr);
     setPasswordError(passwordErr);
-    
+
     return !emailErr && !passwordErr;
   }, [email, password, clearEmailValidation, clearPasswordValidation]);
 
@@ -125,38 +126,52 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.form}>
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={handleEmailChange}
-              placeholder="Nhập email của bạn"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              textContentType="emailAddress"
-              error={emailError}
-            />
-
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={handlePasswordChange}
-              placeholder="Nhập mật khẩu của bạn"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="password"
-              textContentType="password"
-              error={passwordError}
-              rightIcon={
-                <EyeIcon
-                  isVisible={showPassword}
-                  color={Colors.text.secondary}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, emailError && styles.inputError]}
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  placeholder="Nhập email của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
                 />
-              }
-              onRightIconPress={handleTogglePassword}
-            />
+              </View>
+              {emailError && <Text style={styles.errorText}>{emailError}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mật khẩu</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, passwordError && styles.inputError]}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  placeholder="Nhập mật khẩu của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={handleTogglePassword}
+                >
+                  <EyeIcon
+                    isVisible={showPassword}
+                    color={Colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            </View>
 
             <TouchableOpacity
               style={styles.forgotPassword}
@@ -227,6 +242,41 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
+  inputGroup: {
+    marginBottom: verticalScale(20),
+  },
+  label: {
+    fontSize: responsiveFontSize.base,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: verticalScale(8),
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: scale(8),
+    backgroundColor: Colors.white,
+  },
+  textInput: {
+    fontSize: responsiveFontSize.base,
+    color: Colors.text.primary,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    minHeight: scale(48),
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeIcon: {
+    padding: scale(12),
+  },
+  inputError: {
+    borderColor: Colors.danger,
+  },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: verticalScale(32),
@@ -245,7 +295,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize.sm,
     fontWeight: Typography.body2.fontWeight,
     color: Colors.danger,
-    textAlign: 'center',
+    textAlign: 'left',
     marginTop: verticalScale(8),
   },
   footer: {

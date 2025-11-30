@@ -1,115 +1,71 @@
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   RefreshControl,
-  ScrollView,
   StyleSheet,
-  Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import AdminCustomerReportingAPI, {
-  CustomerReportingTemplate,
-} from '../api/admin-customer-reporting.api';
-import { Button, Card, Input } from '../components/common';
+import { AdminAPI, CustomerReport } from '../api/admin.api';
 import { Colors, Typography } from '../constants';
 
 export default function CustomerReportingScreen() {
-  const [templates, setTemplates] = useState<CustomerReportingTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<CustomerReport[]>([]);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({
-    template_name: '',
-    report_frequency: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
-    customer_limit: 1000,
-  });
+  const [selectedReport, setSelectedReport] = useState<CustomerReport | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'resolved' | 'in_progress'>('all');
 
   useEffect(() => {
-    loadTemplates();
+    loadReports();
   }, []);
 
-  const loadTemplates = async () => {
+  const loadReports = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await AdminCustomerReportingAPI.getTemplates();
+      const response = await AdminAPI.getCustomerReports();
       if (response.success) {
-        setTemplates(response.data);
+        setReports(response.data);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load customer reporting templates');
+      console.error('Error loading customer reports:', error);
+      Alert.alert('Error', 'Failed to load customer reports');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const handleCreateTemplate = async () => {
-    if (!newTemplate.template_name.trim()) {
-      Alert.alert('Error', 'Please enter a template name');
-      return;
-    }
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadReports();
+    setRefreshing(false);
+  }, [loadReports]);
 
+  const handleUpdateStatus = async (reportId: number, status: 'pending' | 'in_progress' | 'resolved') => {
     try {
-      const templateData = {
-        template_name: newTemplate.template_name,
-        customer_fields: ['name', 'email', 'profession_id', 'created_at'],
-        report_frequency: newTemplate.report_frequency,
-        customer_limit: newTemplate.customer_limit,
-        aggregation_rules: {
-          name: 'count',
-          profession_id: 'group_by',
-        },
-        filter_conditions: {},
-        is_active: true,
-      };
-
-      const response = await AdminCustomerReportingAPI.createTemplate(templateData);
+      const response = await AdminAPI.updateCustomerReport(reportId, { status });
       if (response.success) {
-        Alert.alert('Success', 'Template created successfully');
-        setShowCreateModal(false);
-        setNewTemplate({
-          template_name: '',
-          report_frequency: 'monthly',
-          customer_limit: 1000,
-        });
-        loadTemplates();
+        loadReports();
+        Alert.alert('Success', 'Report status updated successfully');
+        setShowDetailModal(false);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create template');
+      console.error('Error updating report status:', error);
+      Alert.alert('Error', 'Failed to update report status');
     }
   };
 
-  const handleToggleActive = async (templateId: number) => {
-    try {
-      await AdminCustomerReportingAPI.toggleTemplateActive(templateId);
-      loadTemplates();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to toggle template status');
-    }
-  };
-
-  const handleCloneTemplate = async (templateId: number, templateName: string) => {
-    try {
-      const newName = `${templateName} (Copy)`;
-      const response = await AdminCustomerReportingAPI.cloneTemplate(templateId, newName);
-      if (response.success) {
-        Alert.alert('Success', 'Template cloned successfully');
-        loadTemplates();
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to clone template');
-    }
-  };
-
-  const handleDeleteTemplate = async (templateId: number) => {
+  const handleDelete = (report: CustomerReport) => {
     Alert.alert(
       'Confirm Delete',
-      'Are you sure you want to delete this template?',
+      `Are you sure you want to delete this report?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -117,37 +73,15 @@ export default function CustomerReportingScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await AdminCustomerReportingAPI.deleteTemplate(templateId);
-              Alert.alert('Success', 'Template deleted successfully');
-              loadTemplates();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete template');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleGenerateReport = async (templateId: number, templateName: string) => {
-    Alert.alert(
-      'Generate Report',
-      `Generate report using template: ${templateName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Generate',
-          onPress: async () => {
-            try {
-              const response = await AdminCustomerReportingAPI.generateReport(templateId);
+              const response = await AdminAPI.deleteCustomerReport(report.id);
               if (response.success) {
-                Alert.alert(
-                  'Report Generated',
-                  `Report generated successfully!\nRecords: ${response.data.summary.total_records}\nGenerated at: ${response.data.summary.generated_at}`
-                );
+                Alert.alert('Success', 'Report deleted successfully');
+                loadReports();
+                setShowDetailModal(false);
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to generate report');
+              console.error('Error deleting report:', error);
+              Alert.alert('Error', 'Failed to delete report');
             }
           },
         },
@@ -155,185 +89,234 @@ export default function CustomerReportingScreen() {
     );
   };
 
-  const getFrequencyColor = (frequency: string) => {
-    switch (frequency) {
-      case 'daily': return '#EF4444';
-      case 'weekly': return '#F59E0B';
-      case 'monthly': return '#10B981';
-      case 'yearly': return '#3B82F6';
-      default: return Colors.primary;
+  const openDetailModal = (report: CustomerReport) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return Colors.warning;
+      case 'in_progress':
+        return Colors.info;
+      case 'resolved':
+        return Colors.success;
+      default:
+        return Colors.text.secondary;
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading templates...</Text>
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'in_progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      default:
+        return status;
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return Colors.danger;
+      case 'medium':
+        return Colors.warning;
+      case 'low':
+        return Colors.success;
+      default:
+        return Colors.text.secondary;
+    }
+  };
+
+  const filteredReports = reports.filter((report) => {
+    const matchesSearch = 
+      report.subject.toLowerCase().includes(searchText.toLowerCase()) ||
+      report.user_name.toLowerCase().includes(searchText.toLowerCase()) ||
+      report.user_email.toLowerCase().includes(searchText.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const renderFilterButton = (filter: typeof statusFilter, label: string) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        statusFilter === filter && styles.activeFilterButton
+      ]}
+      onPress={() => setStatusFilter(filter)}
+    >
+      <Text style={[
+        styles.filterButtonText,
+        statusFilter === filter && styles.activeFilterButtonText
+      ]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderReportItem = ({ item }: { item: CustomerReport }) => (
+    <TouchableOpacity style={styles.reportCard} onPress={() => openDetailModal(item)}>
+      <View style={styles.reportHeader}>
+        <Text style={styles.reportSubject} numberOfLines={2}>{item.subject}</Text>
+        <View style={styles.badges}>
+          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(item.priority) + '20' }]}>
+            <Text style={[styles.priorityText, { color: getPriorityColor(item.priority) }]}>
+              {item.priority.toUpperCase()}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {getStatusText(item.status)}
+            </Text>
+          </View>
+        </View>
       </View>
-    );
-  }
+      
+      <Text style={styles.reportDescription} numberOfLines={2}>{item.description}</Text>
+      
+      <View style={styles.reportFooter}>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{item.user_name}</Text>
+          <Text style={styles.userEmail}>{item.user_email}</Text>
+        </View>
+        <Text style={styles.reportDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="document-text-outline" size={64} color={Colors.text.secondary} />
+      <Text style={styles.emptyText}>No customer reports found</Text>
+      <Text style={styles.emptySubtext}>Reports will appear here when customers submit them</Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Customer Reporting Templates</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Text style={styles.addButtonText}>+ Add Template</Text>
-        </TouchableOpacity>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search reports..."
+          value={searchText}
+          onChangeText={setSearchText}
+        />
       </View>
 
-      <ScrollView
-        style={styles.scrollContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => {
-            setRefreshing(true);
-            loadTemplates();
-          }} />
-        }
-      >
-        {templates.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No templates found</Text>
-            <Text style={styles.emptySubtext}>Create your first reporting template</Text>
-          </Card>
-        ) : (
-          templates.map((template) => (
-            <Card key={template.id} style={styles.templateCard}>
-              <View style={styles.templateHeader}>
-                <View style={styles.templateInfo}>
-                  <Text style={styles.templateName}>{template.template_name}</Text>
-                  <View style={styles.templateMeta}>
-                    <View style={[
-                      styles.frequencyBadge,
-                      { backgroundColor: getFrequencyColor(template.report_frequency) }
-                    ]}>
-                      <Text style={styles.frequencyText}>{template.report_frequency}</Text>
+      <View style={styles.filterContainer}>
+        {renderFilterButton('all', 'All')}
+        {renderFilterButton('pending', 'Pending')}
+        {renderFilterButton('in_progress', 'In Progress')}
+        {renderFilterButton('resolved', 'Resolved')}
+      </View>
+
+      <FlatList
+        data={filteredReports}
+        renderItem={renderReportItem}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={[styles.listContent, filteredReports.length === 0 && styles.listContentEmpty]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={renderEmptyState}
+      />
+
+      <Modal visible={showDetailModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedReport && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Report Details</Text>
+                  <TouchableOpacity onPress={() => setShowDetailModal(false)}>
+                    <Ionicons name="close" size={24} color={Colors.text.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalBody}>
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Subject</Text>
+                    <Text style={styles.detailValue}>{selectedReport.subject}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Description</Text>
+                    <Text style={styles.detailValue}>{selectedReport.description}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Customer</Text>
+                    <Text style={styles.detailValue}>{selectedReport.user_name}</Text>
+                    <Text style={styles.detailSubValue}>{selectedReport.user_email}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Priority</Text>
+                      <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(selectedReport.priority) + '20' }]}>
+                        <Text style={[styles.priorityText, { color: getPriorityColor(selectedReport.priority) }]}>
+                          {selectedReport.priority.toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.limitText}>Limit: {template.customer_limit}</Text>
+
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Current Status</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedReport.status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: getStatusColor(selectedReport.status) }]}>
+                          {getStatusText(selectedReport.status)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Created</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(selectedReport.created_at).toLocaleString()}
+                    </Text>
                   </View>
                 </View>
-                <Switch
-                  value={template.is_active}
-                  onValueChange={() => handleToggleActive(template.id)}
-                  trackColor={{ false: '#E5E7EB', true: Colors.success }}
-                />
-              </View>
 
-              <View style={styles.templateStats}>
-                <Text style={styles.statsText}>
-                  Last generated: {template.metadata?.last_generated || 'Never'}
-                </Text>
-                <Text style={styles.statsText}>
-                  Total generations: {template.metadata?.total_generations || 0}
-                </Text>
-              </View>
-
-              <View style={styles.templateActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.generateButton]}
-                  onPress={() => handleGenerateReport(template.id, template.template_name)}
-                >
-                  <Text style={styles.generateButtonText}>📊 Generate</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cloneButton]}
-                  onPress={() => handleCloneTemplate(template.id, template.template_name)}
-                >
-                  <Text style={styles.cloneButtonText}>📋 Clone</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deleteButton]}
-                  onPress={() => handleDeleteTemplate(template.id)}
-                >
-                  <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </Card>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Create Template Modal */}
-      <Modal
-        visible={showCreateModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowCreateModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create New Template</Text>
-            <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <Card style={styles.modalCard}>
-              <Input
-                label="Template Name"
-                value={newTemplate.template_name}
-                onChangeText={(text) => setNewTemplate({ ...newTemplate, template_name: text })}
-                placeholder="Enter template name"
-              />
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Report Frequency</Text>
-                <View style={styles.frequencyOptions}>
-                  {['daily', 'weekly', 'monthly', 'yearly'].map((freq) => (
+                <View style={styles.modalActions}>
+                  <Text style={styles.actionsLabel}>Update Status:</Text>
+                  <View style={styles.statusActions}>
                     <TouchableOpacity
-                      key={freq}
-                      style={[
-                        styles.frequencyOption,
-                        newTemplate.report_frequency === freq && styles.selectedFrequency
-                      ]}
-                      onPress={() => setNewTemplate({ 
-                        ...newTemplate, 
-                        report_frequency: freq as 'daily' | 'weekly' | 'monthly' | 'yearly' 
-                      })}
+                      style={[styles.statusButton, styles.pendingButton]}
+                      onPress={() => handleUpdateStatus(selectedReport.id, 'pending')}
                     >
-                      <Text style={[
-                        styles.frequencyOptionText,
-                        newTemplate.report_frequency === freq && styles.selectedFrequencyText
-                      ]}>
-                        {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                      </Text>
+                      <Text style={styles.statusButtonText}>Pending</Text>
                     </TouchableOpacity>
-                  ))}
+                    <TouchableOpacity
+                      style={[styles.statusButton, styles.inProgressButton]}
+                      onPress={() => handleUpdateStatus(selectedReport.id, 'in_progress')}
+                    >
+                      <Text style={styles.statusButtonText}>In Progress</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.statusButton, styles.resolvedButton]}
+                      onPress={() => handleUpdateStatus(selectedReport.id, 'resolved')}
+                    >
+                      <Text style={styles.statusButtonText}>Resolved</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDelete(selectedReport)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={Colors.white} />
+                    <Text style={styles.deleteButtonText}>Delete Report</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-
-              <Input
-                label="Customer Limit"
-                value={newTemplate.customer_limit.toString()}
-                onChangeText={(text) => setNewTemplate({ 
-                  ...newTemplate, 
-                  customer_limit: parseInt(text) || 1000 
-                })}
-                placeholder="1000"
-                keyboardType="numeric"
-              />
-            </Card>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <Button
-              title="Cancel"
-              variant="secondary"
-              onPress={() => setShowCreateModal(false)}
-              style={styles.modalButton}
-            />
-            <Button
-              title="Create Template"
-              onPress={handleCreateTemplate}
-              style={styles.modalButton}
-            />
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -346,208 +329,241 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...Typography.body1,
-    color: Colors.text.secondary,
-    marginTop: 16,
-  },
   header: {
+    padding: 16,
+  },
+  searchInput: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.white,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  activeFilterButton: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterButtonText: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+  },
+  activeFilterButtonText: {
+    color: Colors.white,
+  },
+  listContent: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
+  },
+  reportCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: Colors.text.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  reportHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    alignItems: 'flex-start',
+    marginBottom: 8,
   },
-  title: {
-    ...Typography.h2,
+  reportSubject: {
+    ...Typography.h4,
     color: Colors.text.primary,
+    flex: 1,
+    marginRight: 8,
   },
-  addButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  badges: {
+    gap: 4,
+    alignItems: 'flex-end',
+  },
+  priorityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 8,
   },
-  addButtonText: {
+  priorityText: {
+    ...Typography.caption,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  statusText: {
+    ...Typography.caption,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  reportDescription: {
     ...Typography.body2,
-    color: Colors.white,
+    color: Colors.text.secondary,
+    marginBottom: 12,
+  },
+  reportFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    ...Typography.body2,
+    color: Colors.text.primary,
     fontWeight: '600',
   },
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
+  userEmail: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
   },
-  emptyCard: {
-    padding: 40,
+  reportDate: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 60,
   },
   emptyText: {
-    ...Typography.h3,
-    color: Colors.text.primary,
+    ...Typography.h4,
+    color: Colors.text.secondary,
+    marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     ...Typography.body2,
     color: Colors.text.secondary,
+    textAlign: 'center',
   },
-  templateCard: {
-    padding: 20,
-    marginBottom: 16,
-  },
-  templateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  templateInfo: {
+  modalOverlay: {
     flex: 1,
-  },
-  templateName: {
-    ...Typography.h3,
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  templateMeta: {
-    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
-  frequencyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  modalContent: {
+    backgroundColor: Colors.white,
     borderRadius: 12,
-  },
-  frequencyText: {
-    ...Typography.body2,
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  limitText: {
-    ...Typography.body2,
-    color: Colors.text.secondary,
-  },
-  templateStats: {
-    marginBottom: 16,
-  },
-  statsText: {
-    ...Typography.body2,
-    color: Colors.text.tertiary,
-    marginBottom: 4,
-  },
-  templateActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  generateButton: {
-    backgroundColor: Colors.primary + '20',
-  },
-  generateButtonText: {
-    ...Typography.body2,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  cloneButton: {
-    backgroundColor: Colors.warning + '20',
-  },
-  cloneButtonText: {
-    ...Typography.body2,
-    color: '#D97706',
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: Colors.danger + '20',
-  },
-  deleteButtonText: {
-    ...Typography.body2,
-    color: Colors.danger,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
+    margin: 20,
+    maxHeight: '80%',
+    width: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
   modalTitle: {
-    ...Typography.h2,
+    ...Typography.h3,
     color: Colors.text.primary,
   },
-  closeButton: {
-    ...Typography.h3,
-    color: Colors.text.secondary,
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  modalCard: {
+  modalBody: {
     padding: 20,
-    marginTop: 20,
   },
-  formGroup: {
+  detailSection: {
     marginBottom: 16,
   },
-  label: {
+  detailRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  detailLabel: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  detailValue: {
+    ...Typography.body1,
+    color: Colors.text.primary,
+  },
+  detailSubValue: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+  },
+  modalActions: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+  },
+  actionsLabel: {
     ...Typography.body2,
     color: Colors.text.primary,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  frequencyOptions: {
+  statusActions: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 16,
   },
-  frequencyOption: {
+  statusButton: {
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
     alignItems: 'center',
   },
-  selectedFrequency: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '10',
+  pendingButton: {
+    backgroundColor: Colors.warning,
   },
-  frequencyOptionText: {
+  inProgressButton: {
+    backgroundColor: Colors.info,
+  },
+  resolvedButton: {
+    backgroundColor: Colors.success,
+  },
+  statusButtonText: {
     ...Typography.body2,
-    color: Colors.text.secondary,
-  },
-  selectedFrequencyText: {
-    color: Colors.primary,
+    color: Colors.white,
     fontWeight: '600',
   },
-  modalFooter: {
+  deleteButton: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.danger,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
   },
-  modalButton: {
-    flex: 1,
+  deleteButtonText: {
+    ...Typography.body1,
+    color: Colors.white,
+    fontWeight: '600',
   },
 });

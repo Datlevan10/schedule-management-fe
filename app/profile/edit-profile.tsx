@@ -43,7 +43,7 @@ export default function EditProfileScreen() {
         department: profile.department,
       });
       Alert.alert('Success', 'Profile updated successfully');
-      router.back();
+      router.replace('/(tabs)/profile');
     } catch (error) {
       Alert.alert('Error', 'Failed to update profile');
     } finally {
@@ -93,7 +93,7 @@ export default function EditProfileScreen() {
         <View style={styles.buttons}>
           <Button
             title="Cancel"
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(tabs)/profile')}
             variant="secondary"
             style={styles.button}
           />

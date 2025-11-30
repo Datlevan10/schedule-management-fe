@@ -55,7 +55,7 @@ export default function NotificationSettingsScreen() {
       if (reminderMinutes[1440]) advance_minutes.push(1440);
 
       Alert.alert('Success', 'Notification settings updated');
-      router.back();
+      router.replace('/(tabs)/profile');
     } catch (error) {
       Alert.alert('Error', 'Failed to update settings');
     } finally {

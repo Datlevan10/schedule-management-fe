@@ -12,18 +12,16 @@ import {
 } from 'react-native';
 import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
 import { Card } from '../../components/common';
-import { Colors, Typography } from '../../constants';
+import { Colors } from '../../constants';
 import { useAuth } from '../../hooks';
-import { 
-  scale, 
-  verticalScale, 
-  moderateScale,
-  responsiveFontSize,
-  spacing,
+import {
   getSafeAreaInsets,
   isSmallDevice,
-  wp,
-  hp,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  spacing,
+  verticalScale
 } from '../../utils/responsive';
 
 const professionIcons: Record<string, string> = {
@@ -138,7 +136,7 @@ export default function HomeScreen() {
           <Text style={styles.templateDescription}>{item.template_description}</Text>
           <View style={styles.templateFooter}>
             <Text style={styles.scheduleItems}>
-              {requiredColumns} required, {optionalColumns} optional fields
+              {requiredColumns} yêu cầu điền giá trị, {optionalColumns} các trường tùy chọn
             </Text>
             <View style={styles.actionButtons}>
               <TouchableOpacity
@@ -159,7 +157,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Chào mừng trở lại,</Text>
-          <Text style={styles.userName}>{user?.name || 'User'}! 👋</Text>
+          <Text style={styles.userName}>{user?.name || 'Nguyen Van A'}! 👋</Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Text style={styles.notificationIcon}>🔔</Text>
@@ -169,20 +167,20 @@ export default function HomeScreen() {
       <View style={styles.quickStats}>
         <Card style={styles.statCard}>
           <Text style={styles.statNumber}>3</Text>
-          <Text style={styles.statLabel}>Active Tasks</Text>
+          <Text style={styles.statLabel}>Nhiệm vụ đang hoạt động</Text>
         </Card>
         <Card style={styles.statCard}>
           <Text style={styles.statNumber}>2</Text>
-          <Text style={styles.statLabel}>Reminders</Text>
+          <Text style={styles.statLabel}>Lời nhắc nhở</Text>
         </Card>
         <Card style={styles.statCard}>
           <Text style={styles.statNumber}>85%</Text>
-          <Text style={styles.statLabel}>Productivity</Text>
+          <Text style={styles.statLabel}>Năng suất</Text>
         </Card>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Schedule Templates</Text>
+        <Text style={styles.sectionTitle}>Mẫu lịch trình</Text>
         <Text style={styles.sectionSubtitle}>
           Chọn mẫu lịch phù hợp với nghề nghiệp của bạn
         </Text>

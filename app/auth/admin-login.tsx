@@ -8,12 +8,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, EyeIcon, Input } from '../components/common';
+import { AdminAPI } from '../api/admin.api';
+import { Button, EyeIcon } from '../components/common';
 import { Colors, Typography } from '../constants';
-import { useAuth } from '../hooks';
 
 export default function AdminLoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,8 +22,8 @@ export default function AdminLoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-
-  const { login, isLoading, error, clearError } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,22 +57,52 @@ export default function AdminLoginScreen() {
   };
 
   const handleAdminLogin = async () => {
-    clearError();
+    setError('');
 
     if (!validateForm()) return;
 
-    const result = await login({ email, password, role: 'admin' });
+    setIsLoading(true);
 
-    if (result.success) {
-      await AsyncStorage.setItem('userRole', 'admin');
-      router.replace('/admin/dashboard');
-    } else {
-      Alert.alert('Đăng nhập không thành công', result.error || 'Vui lòng thử lại với tài khoản Admin');
+    try {
+      console.log('🔐 Attempting admin login with:', email);
+      const result = await AdminAPI.login({ email, password });
+
+      if (result.success) {
+        console.log('✅ Admin login successful:', result.data.admin.name);
+
+        // Store admin role for app state
+        await AsyncStorage.setItem('userRole', 'admin');
+
+        Alert.alert(
+          'Đăng nhập thành công',
+          `Chào mừng ${result.data.admin.name}!`,
+          [{ text: 'OK', onPress: () => router.replace('/admin/dashboard') }]
+        );
+      } else {
+        setError('Đăng nhập không thành công');
+      }
+    } catch (error: any) {
+      console.error('❌ Admin login failed:', error);
+
+      let errorMessage = 'Đăng nhập không thành công';
+
+      if (error.response?.status === 401) {
+        errorMessage = 'Email hoặc mật khẩu không đúng';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Tài khoản không có quyền admin';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'Không thể kết nối đến máy chủ';
+      }
+
+      setError(errorMessage);
+      Alert.alert('Lỗi đăng nhập', errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleBackToWelcome = () => {
-    router.back();
+    router.replace('/welcome');
   };
 
   return (
@@ -89,36 +120,57 @@ export default function AdminLoginScreen() {
             <View style={styles.adminBadge}>
               <Text style={styles.adminBadgeText}>ADMIN</Text>
             </View>
-            <Text style={styles.title}>Admin Portal</Text>
+            <Text style={styles.title}>Cổng thông tin quản trị</Text>
             <Text style={styles.subtitle}>Đăng nhập với tài khoản quản trị viên</Text>
           </View>
 
           <View style={styles.form}>
-            <Input
-              label="Admin Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="admin@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={emailError}
-            />
-
-            <Input
-              label="Admin Password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Nhập mật khẩu admin"
-              secureTextEntry={!showPassword}
-              error={passwordError}
-              rightIcon={
-                <EyeIcon
-                  isVisible={showPassword}
-                  color={Colors.text.secondary}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Admin Email</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, emailError && styles.inputError]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="admin@example.com"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
                 />
-              }
-              onRightIconPress={() => setShowPassword(!showPassword)}
-            />
+              </View>
+              {emailError && <Text style={styles.errorText}>{emailError}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mật khẩu quản trị viên</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, passwordError && styles.inputError]}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Nhập mật khẩu admin"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <EyeIcon
+                    isVisible={showPassword}
+                    color={Colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            </View>
 
             <Button
               title="Đăng nhập Admin"
@@ -128,7 +180,7 @@ export default function AdminLoginScreen() {
             />
 
             {error && (
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.generalErrorText}>{error}</Text>
             )}
           </View>
 
@@ -194,11 +246,53 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+  },
+  textInput: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 48,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeIcon: {
+    padding: 12,
+  },
+  inputError: {
+    borderColor: Colors.danger,
+  },
   loginButton: {
     marginTop: 24,
     backgroundColor: Colors.danger,
   },
   errorText: {
+    ...Typography.body2,
+    color: Colors.danger,
+    textAlign: 'left',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  generalErrorText: {
     ...Typography.body2,
     color: Colors.danger,
     textAlign: 'center',
