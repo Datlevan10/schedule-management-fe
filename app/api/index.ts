@@ -28,6 +28,12 @@ const getBaseURL = () => {
 const API_BASE_URL = getBaseURL();
 const TOKEN_KEY = StorageKeys.AUTH.TOKEN;
 
+console.log('🌐 API Configuration Loaded:');
+console.log('🌐 Current Platform:', Platform.OS);
+console.log('🌐 Development Mode:', __DEV__);
+console.log('🌐 API_BASE_URL:', API_BASE_URL);
+console.log('🌐 From API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+
 interface ApiResponse<T = any> {
   data: T;
   message?: string;
