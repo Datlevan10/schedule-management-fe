@@ -171,6 +171,8 @@ export default function WelcomeScreen() {
             source={{ uri: welcomeData.backgroundImage }}
             style={styles.welcomeImage}
             resizeMode="contain"
+            width={350}
+            height={350}
             onLoad={() => {
               console.log('✅ Image loaded successfully:', welcomeData.backgroundImage);
             }}
@@ -240,7 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 120,
+    paddingTop: 100,
   },
   imageBackground: {
     flex: 1,
@@ -250,7 +252,7 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   titleText: {
     ...Typography.h1,
