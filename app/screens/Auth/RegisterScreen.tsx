@@ -167,6 +167,7 @@ export default function RegisterScreen() {
   };
 
   const validateForm = () => {
+    console.log('🔍 Starting form validation');
     const newErrors = {
       name: '',
       email: '',
@@ -222,6 +223,8 @@ export default function RegisterScreen() {
     }
 
     setErrors(newErrors);
+    console.log('🔍 Validation errors:', newErrors);
+    console.log('🔍 Validation result:', isValid);
     return isValid;
   };
 
@@ -284,21 +287,39 @@ export default function RegisterScreen() {
   }, []);
 
   const handleRegister = async () => {
+    console.log('📝 Register button clicked');
+    console.log('📝 Form data:', formData);
+    
     clearError();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('❌ Form validation failed');
+      return;
+    }
+
+    console.log('✅ Form validation passed');
 
     const registrationData = {
       name: formData.name,
       email: formData.email,
       password: formData.password,
+      password_confirmation: formData.confirmPassword,
       profession_id: formData.professionId,
       profession_level: formData.professionLevel,
       workplace: formData.workplace || undefined,
       department: formData.department || undefined,
+      work_schedule: ["morning", "evening"],
+      work_habits: ["teamwork", "punctual"],
+      notification_preferences: {
+        email_notifications: true,
+        push_notifications: true,
+        reminder_advance_minutes: [15, 60, 1440]
+      }
     };
 
+    console.log('🚀 Calling register API with data:', registrationData);
     const result = await register(registrationData);
+    console.log('📥 Register API result:', result);
 
     if (result.success) {
       Alert.alert(
