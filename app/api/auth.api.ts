@@ -67,6 +67,29 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    email: string;
+    expires_in: number;
+    sent_at: string;
+  };
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    user: {
+      id: number;
+      email: string;
+      name: string;
+    };
+    reset_at: string;
+  };
+}
+
 export const AuthAPI = {
   login: async (data: LoginRequest) => {
     const response = await api.post<AuthResponse>('/auth/login', data);
@@ -92,11 +115,44 @@ export const AuthAPI = {
   },
 
   forgotPassword: async (email: string) => {
-    return api.post('/auth/forgot-password', { email });
+    try {
+      const response = await api.post<ForgotPasswordResponse>('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error: any) {
+      console.error('ForgotPassword API Error:', error);
+      throw {
+        response: {
+          data: {
+            success: false,
+            message: error.response?.data?.message || 'Failed to send reset email. Please try again.',
+            error: error.response?.data?.error || 'NETWORK_ERROR'
+          }
+        }
+      };
+    }
   },
 
   resetPassword: async (data: ResetPasswordRequest) => {
-    return api.post('/auth/reset-password', data);
+    try {
+      const response = await api.post<ResetPasswordResponse>('/auth/reset-password', {
+        email: data.email,
+        token: data.code, // Backend might expect 'token' instead of 'code'
+        password: data.newPassword,
+        password_confirmation: data.newPassword
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('ResetPassword API Error:', error);
+      throw {
+        response: {
+          data: {
+            success: false,
+            message: error.response?.data?.message || 'Failed to reset password. Please try again.',
+            error: error.response?.data?.error || 'NETWORK_ERROR'
+          }
+        }
+      };
+    }
   },
 
   verifyToken: async () => {

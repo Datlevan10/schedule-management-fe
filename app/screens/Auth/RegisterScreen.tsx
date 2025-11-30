@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,22 +7,23 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { ProfessionsAPI, type Profession } from '../../api/professions.api';
-import { Button, EyeIcon, Input, Select } from '../../components/common';
+import { Button, EyeIcon, Select } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 import { useDebouncedValidation, validationFunctions } from '../../hooks/useDebouncedValidation';
-import { 
-  scale, 
-  verticalScale, 
-  moderateScale,
-  responsiveFontSize,
-  spacing,
+import {
   getSafeAreaInsets,
   isSmallDevice,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  spacing,
+  verticalScale,
 } from '../../utils/responsive';
 
 type ProfessionLevel = 'student' | 'resident' | 'junior' | 'senior' | 'expert';
@@ -56,11 +57,11 @@ export default function RegisterScreen() {
   });
 
   // Setup debounced validation
-  const { debouncedValidate: debouncedNameValidate } = 
+  const { debouncedValidate: debouncedNameValidate } =
     useDebouncedValidation(validationFunctions.name, 300);
-  const { debouncedValidate: debouncedEmailValidate } = 
+  const { debouncedValidate: debouncedEmailValidate } =
     useDebouncedValidation(validationFunctions.email, 500);
-  const { debouncedValidate: debouncedPasswordValidate } = 
+  const { debouncedValidate: debouncedPasswordValidate } =
     useDebouncedValidation(validationFunctions.password, 300);
 
   const { register, isLoading, error, clearError } = useAuth();
@@ -344,70 +345,98 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.form}>
-            <Input
-              label="Họ và tên đầy đủ"
-              value={formData.name}
-              onChangeText={handleNameChange}
-              placeholder="Nhập tên đầy đủ của bạn"
-              autoCapitalize="words"
-              autoCorrect={false}
-              autoComplete="name"
-              textContentType="name"
-              error={errors.name}
-            />
-
-            <Input
-              label="Email"
-              value={formData.email}
-              onChangeText={handleEmailChange}
-              placeholder="Nhập email của bạn"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              textContentType="emailAddress"
-              error={errors.email}
-            />
-
-            <Input
-              label="Password"
-              value={formData.password}
-              onChangeText={handlePasswordChange}
-              placeholder="Tạo mật khẩu mạnh"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="password"
-              textContentType="password"
-              error={errors.password}
-              rightIcon={
-                <EyeIcon
-                  isVisible={showPassword}
-                  color={Colors.text.secondary}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Họ và tên đầy đủ</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.name && styles.inputError]}
+                  value={formData.name}
+                  onChangeText={handleNameChange}
+                  placeholder="Nhập tên đầy đủ của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="name"
+                  textContentType="name"
                 />
-              }
-              onRightIconPress={handleTogglePassword}
-            />
+              </View>
+              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+            </View>
 
-            <Input
-              label="Xác nhận mật khẩu"
-              value={formData.confirmPassword}
-              onChangeText={handleConfirmPasswordChange}
-              placeholder="Xác nhận mật khẩu của bạn"
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="password"
-              textContentType="password"
-              error={errors.confirmPassword}
-              rightIcon={
-                <EyeIcon
-                  isVisible={showConfirmPassword}
-                  color={Colors.text.secondary}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.email && styles.inputError]}
+                  value={formData.email}
+                  onChangeText={handleEmailChange}
+                  placeholder="Nhập email của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
                 />
-              }
-              onRightIconPress={handleToggleConfirmPassword}
-            />
+              </View>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, errors.password && styles.inputError]}
+                  value={formData.password}
+                  onChangeText={handlePasswordChange}
+                  placeholder="Tạo mật khẩu mạnh"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={handleTogglePassword}
+                >
+                  <EyeIcon
+                    isVisible={showPassword}
+                    color={Colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Xác nhận mật khẩu</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, errors.confirmPassword && styles.inputError]}
+                  value={formData.confirmPassword}
+                  onChangeText={handleConfirmPasswordChange}
+                  placeholder="Xác nhận mật khẩu của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={handleToggleConfirmPassword}
+                >
+                  <EyeIcon
+                    isVisible={showConfirmPassword}
+                    color={Colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+            </View>
 
             <Select
               label="Nghề nghiệp"
@@ -431,23 +460,35 @@ export default function RegisterScreen() {
               error={errors.professionLevel}
             />
 
-            <Input
-              label="Nơi làm việc (Tùy chọn)"
-              value={formData.workplace}
-              onChangeText={(value) => handleInputChange('workplace', value)}
-              placeholder="Nhập nơi làm việc của bạn"
-              autoCapitalize="words"
-              error={errors.workplace}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nơi làm việc (Tùy chọn)</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.workplace && styles.inputError]}
+                  value={formData.workplace}
+                  onChangeText={(value) => handleInputChange('workplace', value)}
+                  placeholder="Nhập nơi làm việc của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.workplace && <Text style={styles.errorText}>{errors.workplace}</Text>}
+            </View>
 
-            <Input
-              label="Khoa (Tùy chọn)"
-              value={formData.department}
-              onChangeText={(value) => handleInputChange('department', value)}
-              placeholder="Nhập khoa của bạn"
-              autoCapitalize="words"
-              error={errors.department}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Khoa (Tùy chọn)</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.department && styles.inputError]}
+                  value={formData.department}
+                  onChangeText={(value) => handleInputChange('department', value)}
+                  placeholder="Nhập khoa của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.department && <Text style={styles.errorText}>{errors.department}</Text>}
+            </View>
 
             <Button
               title="Tạo tài khoản"
@@ -511,6 +552,41 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
+  inputGroup: {
+    marginBottom: verticalScale(20),
+  },
+  label: {
+    fontSize: responsiveFontSize.base,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: verticalScale(8),
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: scale(8),
+    backgroundColor: Colors.white,
+  },
+  textInput: {
+    fontSize: responsiveFontSize.base,
+    color: Colors.text.primary,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    minHeight: scale(48),
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeIcon: {
+    padding: scale(12),
+  },
+  inputError: {
+    borderColor: Colors.danger,
+  },
   registerButton: {
     marginTop: verticalScale(24),
     marginBottom: verticalScale(16),
@@ -520,7 +596,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize.sm,
     fontWeight: Typography.body2.fontWeight,
     color: Colors.danger,
-    textAlign: 'center',
+    textAlign: 'left',
     marginTop: verticalScale(8),
   },
   footer: {

@@ -6,36 +6,36 @@
 export const API_CONFIG = {
   // Base URLs for different environments
   BASE_URLS: {
-    DEVELOPMENT: 'http://192.168.1.2:8000',
-    PRODUCTION: 'https://api.scheduleapp.com',
-    LOCALHOST: 'http://127.0.0.1:8000',
-    LOCAL_IP: 'http://192.168.1.2:8000', // Your machine's local WiFi IP (update this!)
+    DEVELOPMENT: "http://192.168.1.2:8000",
+    PRODUCTION: "https://api.scheduleapp.com",
+    LOCALHOST: "http://127.0.0.2:8000",
+    LOCAL_IP: "http://192.168.1.2:8000", // Your machine's local WiFi IP (update this!)
     // Common Windows WiFi IP ranges:
     // 192.168.1.x (most home routers)
-    // 192.168.0.x (some routers) 
+    // 192.168.0.x (some routers)
     // 10.0.0.x (some networks)
   },
 
   // Current base URL based on environment
   get BASE_URL() {
-    return __DEV__ 
-      ? this.BASE_URLS.LOCAL_IP  // Use machine's IP for development
+    return __DEV__
+      ? this.BASE_URLS.LOCAL_IP
       : this.BASE_URLS.PRODUCTION;
   },
 
   // API endpoints
   ENDPOINTS: {
-    WELCOME_SCREEN: '/api/v1/welcome-screen',
-    PROFESSIONS: '/api/v1/professions',
+    WELCOME_SCREEN: "/api/v1/welcome-screen",
+    PROFESSIONS: "/api/v1/professions",
     AUTH: {
-      LOGIN: '/api/v1/auth/login',
-      REGISTER: '/api/v1/auth/register',
-      LOGOUT: '/api/v1/auth/logout',
-      FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
+      LOGIN: "/api/v1/auth/login",
+      REGISTER: "/api/v1/auth/register",
+      LOGOUT: "/api/v1/auth/logout",
+      FORGOT_PASSWORD: "/api/v1/auth/forgot-password",
     },
     USER: {
-      PROFILE: '/api/v1/user/profile',
-      UPDATE: '/api/v1/user/update',
+      PROFILE: "/api/v1/user/profile",
+      UPDATE: "/api/v1/user/update",
     },
   },
 
@@ -47,10 +47,10 @@ export const API_CONFIG = {
   // Helper function to get full image URL
   getImageUrl: (imagePath: string): string => {
     // If it's already a full URL, return as is
-    if (imagePath.startsWith('http')) {
+    if (imagePath.startsWith("http")) {
       return imagePath;
     }
-    
+
     // Construct full URL from relative path
     return `${API_CONFIG.STORAGE_URL}/${imagePath}`;
   },

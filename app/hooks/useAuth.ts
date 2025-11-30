@@ -170,19 +170,30 @@ export const useAuth = () => {
     }));
 
     try {
-      await AuthAPI.forgotPassword(email);
+      console.log('🔐 Sending password reset request for:', email);
+      const response = await AuthAPI.forgotPassword(email);
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
       }));
-      return { success: true };
+      
+      console.log('✅ Password reset email sent successfully');
+      return { 
+        success: true, 
+        message: response.message || 'Password reset email sent successfully',
+        data: response.data
+      };
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to send reset email';
+      console.error('❌ Forgot password error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to send reset email. Please try again.';
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
         error: errorMessage,
       }));
+      
       return { success: false, error: errorMessage };
     }
   };
@@ -195,19 +206,41 @@ export const useAuth = () => {
     }));
 
     try {
-      await AuthAPI.resetPassword({ email, code, newPassword });
+      console.log('🔐 Resetting password for:', email);
+      const response = await AuthAPI.resetPassword({ email, code, newPassword });
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
       }));
-      return { success: true };
+      
+      console.log('✅ Password reset successfully');
+      return { 
+        success: true, 
+        message: response.message || 'Password reset successfully',
+        data: response.data
+      };
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Password reset failed';
+      console.error('❌ Reset password error:', error);
+      let errorMessage = 'Password reset failed. Please try again.';
+      
+      // Handle specific error cases
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 422) {
+        errorMessage = 'Invalid reset code or expired link. Please request a new password reset.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'User not found. Please check your email address.';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Too many attempts. Please wait before trying again.';
+      }
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
         error: errorMessage,
       }));
+      
       return { success: false, error: errorMessage };
     }
   };

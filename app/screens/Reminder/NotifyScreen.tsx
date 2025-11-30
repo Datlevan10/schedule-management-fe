@@ -15,58 +15,59 @@ interface Notification {
   title: string;
   description: string;
   time: string;
-  type: 'reminder' | 'task' | 'event' | 'alert';
+  type: 'reminder' | 'nhiệm vụ' | 'sự kiện' | 'cảnh báo';
   isRead: boolean;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'thấp' | 'trung bình' | 'cao';
 }
 
 const mockNotifications: Notification[] = [
   {
     id: '1',
-    title: 'Team Meeting',
-    description: 'Daily standup meeting in 15 minutes',
-    time: '15 min',
+    title: 'Họp nhóm',
+    description: 'Họp đứng hàng ngày trong 15 phút',
+    time: '15 phút',
     type: 'reminder',
     isRead: false,
-    priority: 'high',
+    priority: 'cao'
   },
   {
     id: '2',
-    title: 'Task Due',
-    description: 'Complete project presentation slides',
-    time: '1 hour',
-    type: 'task',
+    title: 'Nhiệm vụ đến hạn',
+    description: 'Hoàn thành slide thuyết trình dự án',
+    time: '1 giờ',
+    type: 'nhiệm vụ',
     isRead: false,
-    priority: 'high',
+    priority: 'cao'
   },
   {
     id: '3',
-    title: 'Lunch Break',
-    description: 'Time to take a break and have lunch',
-    time: '2 hours',
+    title: 'Nghỉ trưa',
+    description: 'Giờ nghỉ giải lao và ăn trưa',
+    time: '2 giờ',
     type: 'reminder',
     isRead: true,
-    priority: 'low',
+    priority: 'thấp'
   },
   {
     id: '4',
-    title: 'Doctor Appointment',
-    description: 'Annual health checkup at 3:00 PM',
-    time: '3 hours',
-    type: 'event',
+    title: 'Hẹn gặp bác sĩ',
+    description: 'Khám sức khỏe định kỳ lúc 3:00 chiều',
+    time: '3 giờ',
+    type: 'sự kiện',
     isRead: false,
-    priority: 'medium',
+    priority: 'trung bình'
   },
   {
     id: '5',
-    title: 'Project Deadline',
-    description: 'Submit final report by end of day',
-    time: '5 hours',
-    type: 'alert',
+    title: 'Hạn chót dự án',
+    description: 'Nộp báo cáo cuối cùng trước cuối ngày',
+    time: '5 giờ',
+    type: 'cảnh báo',
     isRead: true,
-    priority: 'high',
-  },
-];
+    priority: 'cao'
+  }
+]
+
 
 export default function NotifyScreen() {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
@@ -76,18 +77,18 @@ export default function NotifyScreen() {
   const getTypeIcon = (type: Notification['type']) => {
     switch (type) {
       case 'reminder': return '🔔';
-      case 'task': return '📝';
-      case 'event': return '📅';
-      case 'alert': return '⚠️';
+      case 'nhiệm vụ': return '📝';
+      case 'sự kiện': return '📅';
+      case 'cảnh báo': return '⚠️';
       default: return '📌';
     }
   };
 
   const getPriorityColor = (priority: Notification['priority']) => {
     switch (priority) {
-      case 'high': return '#EF4444';
-      case 'medium': return '#F59E0B';
-      case 'low': return '#10B981';
+      case 'cao': return '#EF4444';
+      case 'trung bình': return '#F59E0B';
+      case 'thấp': return '#10B981';
       default: return Colors.text.secondary;
     }
   };
@@ -132,7 +133,7 @@ export default function NotifyScreen() {
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-          Tất cả
+            Tất cả
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -149,7 +150,7 @@ export default function NotifyScreen() {
         {filteredNotifications.length === 0 ? (
           <Card style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📭</Text>
-            <Text style={styles.emptyTitle}>No notifications</Text>
+            <Text style={styles.emptyTitle}>Không có thông báo</Text>
             <Text style={styles.emptySubtitle}>
               {filter === 'unread' ? 'All notifications have been read' : 'You have no notifications at this time'}
             </Text>
@@ -160,10 +161,7 @@ export default function NotifyScreen() {
               key={notification.id}
               onPress={() => markAsRead(notification.id)}
             >
-              <Card style={[
-                styles.notificationCard,
-                !notification.isRead && styles.unreadCard,
-              ]}>
+              <Card>
                 <View style={styles.notificationHeader}>
                   <View style={styles.iconContainer}>
                     <Text style={styles.typeIcon}>{getTypeIcon(notification.type)}</Text>
@@ -198,21 +196,21 @@ export default function NotifyScreen() {
       </View>
 
       <View style={styles.settingsSection}>
-        <Text style={styles.sectionTitle}>Quick Settings</Text>
+        <Text style={styles.sectionTitle}>Cài đặt nhanh</Text>
         <Card style={styles.settingsCard}>
           <TouchableOpacity style={styles.settingItem}>
-            <Text style={styles.settingText}>Notification Sound</Text>
+            <Text style={styles.settingText}>Âm thanh thông báo</Text>
             <Text style={styles.settingValue}>Default</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingItem}>
-            <Text style={styles.settingText}>Vibration</Text>
+            <Text style={styles.settingText}>Rung động</Text>
             <Text style={styles.settingValue}>On</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingItem}>
-            <Text style={styles.settingText}>Do Not Disturb</Text>
-            <Text style={styles.settingValue}>Off</Text>
+            <Text style={styles.settingText}>Không làm phiền</Text>
+            <Text style={styles.settingValue}>Tắt</Text>
           </TouchableOpacity>
         </Card>
       </View>

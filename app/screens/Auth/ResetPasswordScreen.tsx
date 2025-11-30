@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,16 +7,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, Input } from '../../components/common';
+import { Button } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
 
 export default function ResetPasswordScreen() {
+  const params = useLocalSearchParams();
+  
   const [formData, setFormData] = useState({
-    email: '',
+    email: typeof params.email === 'string' ? params.email : '',
     code: '',
     newPassword: '',
     confirmPassword: '',
@@ -97,6 +100,8 @@ export default function ResetPasswordScreen() {
 
     if (!validateForm()) return;
 
+    console.log('🔐 Attempting password reset for:', formData.email);
+    
     const result = await resetPassword(
       formData.email,
       formData.code,
@@ -104,18 +109,48 @@ export default function ResetPasswordScreen() {
     );
 
     if (result.success) {
+      console.log('✅ Password reset successful:', result.data);
+      
       Alert.alert(
-        'Password Reset Successful',
-        'Your password has been updated successfully. You can now login with your new password.',
+        'Password Reset Successful! 🎉',
+        result.message || 'Your password has been updated successfully. You can now login with your new password.',
         [
           {
-            text: 'OK',
+            text: 'Go to Login',
+            style: 'default',
             onPress: () => router.replace('/auth/login'),
           },
         ]
       );
     } else {
-      Alert.alert('Reset Failed', result.error || 'Please try again');
+      console.error('❌ Password reset failed:', result.error);
+      
+      // More specific error handling
+      let title = 'Reset Failed';
+      let message = result.error || 'Please try again';
+      
+      if (result.error?.includes('Invalid') || result.error?.includes('expired')) {
+        title = 'Invalid Reset Code';
+        message = 'The reset code you entered is invalid or has expired. Please request a new password reset email.';
+      } else if (result.error?.includes('User not found')) {
+        title = 'Account Not Found';
+        message = 'No account found with this email address. Please check your email or create a new account.';
+      } else if (result.error?.includes('weak') || result.error?.includes('password')) {
+        title = 'Password Requirements';
+        message = 'Your password doesn\'t meet the security requirements. Please ensure it has uppercase, lowercase, numbers, and is at least 8 characters.';
+      }
+      
+      Alert.alert(title, message, [
+        {
+          text: 'Try Again',
+          style: 'default'
+        },
+        {
+          text: 'Request New Code',
+          style: 'cancel',
+          onPress: () => router.push('/auth/forgot-password')
+        }
+      ]);
     }
   };
 
@@ -134,75 +169,113 @@ export default function ResetPasswordScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.title}>Đặt lại mật khẩu</Text>
             <Text style={styles.subtitle}>
-              Enter the verification code and create a new password
+              Nhập mã xác minh và tạo mật khẩu mới
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Input
-              label="Email"
-              value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.email && styles.inputError]}
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange('email', value)}
+                  placeholder="Nhập email của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                />
+              </View>
+              {errors.email && <Text style={styles.fieldErrorText}>{errors.email}</Text>}
+            </View>
 
-            <Input
-              label="Verification Code"
-              value={formData.code}
-              onChangeText={(value) => handleInputChange('code', value)}
-              placeholder="Enter the code from your email"
-              keyboardType="default"
-              autoCapitalize="characters"
-              error={errors.code}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mã xác minh</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.textInput, errors.code && styles.inputError]}
+                  value={formData.code}
+                  onChangeText={(value) => handleInputChange('code', value)}
+                  placeholder="Nhập mã từ email của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="default"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+              </View>
+              {errors.code && <Text style={styles.fieldErrorText}>{errors.code}</Text>}
+            </View>
 
-            <Input
-              label="New Password"
-              value={formData.newPassword}
-              onChangeText={(value) => handleInputChange('newPassword', value)}
-              placeholder="Enter your new password"
-              secureTextEntry={!showPassword}
-              error={errors.newPassword}
-              rightIcon={
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mật khẩu mới</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, errors.newPassword && styles.inputError]}
+                  value={formData.newPassword}
+                  onChangeText={(value) => handleInputChange('newPassword', value)}
+                  placeholder="Nhập mật khẩu mới của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="newPassword"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIconContainer}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   <Text style={styles.eyeIcon}>
                     {showPassword ? '🙈' : '👁️'}
                   </Text>
                 </TouchableOpacity>
-              }
-            />
+              </View>
+              {errors.newPassword && <Text style={styles.fieldErrorText}>{errors.newPassword}</Text>}
+            </View>
 
-            <Input
-              label="Confirm New Password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => handleInputChange('confirmPassword', value)}
-              placeholder="Confirm your new password"
-              secureTextEntry={!showConfirmPassword}
-              error={errors.confirmPassword}
-              rightIcon={
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
+              <View style={[styles.inputContainer, styles.passwordContainer]}>
+                <TextInput
+                  style={[styles.textInput, styles.passwordInput, errors.confirmPassword && styles.inputError]}
+                  value={formData.confirmPassword}
+                  onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                  placeholder="Xác nhận mật khẩu mới của bạn"
+                  placeholderTextColor={Colors.text.placeholder}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="newPassword"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIconContainer}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
                   <Text style={styles.eyeIcon}>
                     {showConfirmPassword ? '🙈' : '👁️'}
                   </Text>
                 </TouchableOpacity>
-              }
-            />
+              </View>
+              {errors.confirmPassword && <Text style={styles.fieldErrorText}>{errors.confirmPassword}</Text>}
+            </View>
 
             <View style={styles.passwordRequirements}>
-              <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-              <Text style={styles.requirementText}>• At least 8 characters</Text>
-              <Text style={styles.requirementText}>• One uppercase letter</Text>
-              <Text style={styles.requirementText}>• One lowercase letter</Text>
-              <Text style={styles.requirementText}>• One number</Text>
+              <Text style={styles.requirementsTitle}>Yêu cầu về mật khẩu:</Text>
+              <Text style={styles.requirementText}>• Ít nhất 8 ký tự</Text>
+              <Text style={styles.requirementText}>• Một chữ cái viết hoa</Text>
+              <Text style={styles.requirementText}>• Một chữ cái thường</Text>
+              <Text style={styles.requirementText}>• Một số</Text>
             </View>
 
             <Button
-              title="Reset Password"
+              title="Đặt lại mật khẩu"
               onPress={handleResetPassword}
               loading={isLoading}
               style={styles.resetButton}
@@ -215,7 +288,7 @@ export default function ResetPasswordScreen() {
 
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleBackToLogin}>
-              <Text style={styles.backToLoginText}>← Back to Login</Text>
+              <Text style={styles.backToLoginText}>← Quay lại Đăng nhập</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -255,6 +328,48 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+  },
+  textInput: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 48,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeIconContainer: {
+    padding: 12,
+  },
+  inputError: {
+    borderColor: Colors.danger,
+  },
+  fieldErrorText: {
+    ...Typography.body2,
+    color: Colors.danger,
+    textAlign: 'left',
+    marginTop: 8,
+    fontSize: 14,
   },
   passwordRequirements: {
     backgroundColor: Colors.background.secondary,

@@ -52,9 +52,18 @@ class ApiClient {
   private setupInterceptors() {
     this.instance.interceptors.request.use(
       async (config) => {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Check for admin endpoints first
+        if (config.url?.includes('/admin/')) {
+          const adminToken = await AsyncStorage.getItem('@admin_token');
+          if (adminToken) {
+            config.headers.Authorization = `Bearer ${adminToken}`;
+          }
+        } else {
+          // Use regular user token for non-admin endpoints
+          const token = await AsyncStorage.getItem(TOKEN_KEY);
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         return config;
       },
@@ -65,7 +74,13 @@ class ApiClient {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          await AsyncStorage.removeItem(TOKEN_KEY);
+          // Check if it's an admin endpoint
+          if (error.config?.url?.includes('/admin/')) {
+            await AsyncStorage.removeItem('@admin_token');
+            await AsyncStorage.removeItem('@admin_data');
+          } else {
+            await AsyncStorage.removeItem(TOKEN_KEY);
+          }
         }
 
         // Enhanced error handling

@@ -86,23 +86,38 @@ export const ScheduleTemplateAPI = {
   },
 
   downloadTemplate: async (id: number) => {
-    const response = await api.get(`/schedule-import-templates/${id}/download`, {
-      responseType: 'blob'
-    });
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        content_base64: string;
+        filename: string;
+        content_type: string;
+      };
+    }>(`/schedule-import-templates/${id}/download`);
     return response;
   },
 
   downloadSample: async (id: number) => {
-    const response = await api.get(`/schedule-import-templates/${id}/download-sample`, {
-      responseType: 'blob'
-    });
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        content_base64: string;
+        filename: string;
+        content_type: string;
+      };
+    }>(`/schedule-import-templates/${id}/download-sample`);
     return response;
   },
 
   downloadInstructions: async (id: number) => {
-    const response = await api.get(`/schedule-import-templates/${id}/download-instructions`, {
-      responseType: 'blob'
-    });
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        content_base64: string;
+        filename: string;
+        content_type: string;
+      };
+    }>(`/schedule-import-templates/${id}/download-instructions`);
     return response;
   },
 };
