@@ -34,7 +34,10 @@ export default function WelcomeScreen() {
   const [showRoleModal, setShowRoleModal] = useState(false);
 
   const getImageUrl = (backgroundValue: string) => {
-    return API_CONFIG.getImageUrl(backgroundValue);
+    console.log('📱 WelcomeScreen getImageUrl called with:', backgroundValue);
+    const imageUrl = API_CONFIG.getImageUrl(backgroundValue);
+    console.log('📱 WelcomeScreen final image URL:', imageUrl);
+    return imageUrl;
   };
 
   const loadWelcomeData = useCallback(async (): Promise<WelcomeData> => {
@@ -168,7 +171,24 @@ export default function WelcomeScreen() {
             source={{ uri: welcomeData.backgroundImage }}
             style={styles.welcomeImage}
             resizeMode="contain"
+            onLoad={() => {
+              console.log('✅ Image loaded successfully:', welcomeData.backgroundImage);
+            }}
+            onError={(error) => {
+              console.error('❌ Image failed to load:', welcomeData.backgroundImage);
+              console.error('❌ Image error details:', error.nativeEvent.error);
+              setImageError(true);
+            }}
+            onLoadStart={() => {
+              console.log('🔄 Image loading started:', welcomeData.backgroundImage);
+            }}
           />
+        )}
+        {imageError && (
+          <View style={styles.imageErrorContainer}>
+            <Text style={styles.imageErrorText}>Failed to load image</Text>
+            <Text style={styles.imageErrorUrl}>{welcomeData.backgroundImage}</Text>
+          </View>
         )}
         {loading && (
           <ActivityIndicator
@@ -305,6 +325,24 @@ const styles = StyleSheet.create({
   },
   roleButtonSubtitle: {
     ...Typography.body2,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  imageErrorContainer: {
+    padding: 16,
+    backgroundColor: Colors.danger + '20',
+    borderRadius: 8,
+    margin: 16,
+    alignItems: 'center',
+  },
+  imageErrorText: {
+    ...Typography.body2,
+    color: Colors.danger,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  imageErrorUrl: {
+    ...Typography.caption,
     color: Colors.text.secondary,
     textAlign: 'center',
   },
