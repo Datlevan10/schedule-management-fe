@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
+    height: 600,
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginHorizontal: CARD_MARGIN / 2,
@@ -326,19 +327,19 @@ const styles = StyleSheet.create({
     margin: 16,
   },
   imageIcon: {
-    width: 300,
-    height: 230,
+    width: 200,
+    height: 100,
     borderRadius: 8,
   },
   cardTitle: {
-    ...Typography.h3,
+    ...Typography.h6,
     color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: 16,
     fontWeight: 'bold',
   },
   cardDescription: {
-    ...Typography.body1,
+    ...Typography.body3,
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
