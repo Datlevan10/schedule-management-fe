@@ -1,5 +1,6 @@
 import api from './index';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageKeys } from '../constants';
 
 export interface LoginRequest {
   email: string;
@@ -10,12 +11,14 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
+  password_confirmation: string;
   profession_id: number;
   profession_level: 'student' | 'resident' | 'junior' | 'senior' | 'expert';
   workplace?: string;
   department?: string;
-  work_schedule?: any;
-  work_habits?: any;
+  work_schedule?: string[];
+  work_habits?: string[];
+  notification_preferences?: NotificationPreferences;
 }
 
 export interface Profession {
@@ -94,8 +97,8 @@ export const AuthAPI = {
   login: async (data: LoginRequest) => {
     const response = await api.post<AuthResponse>('/auth/login', data);
     if (response.data.data.token) {
-      await AsyncStorage.setItem('@auth_token', response.data.data.token);
-      await AsyncStorage.setItem('@user_data', JSON.stringify(response.data.data.user));
+      await AsyncStorage.setItem(StorageKeys.AUTH.TOKEN, response.data.data.token);
+      await AsyncStorage.setItem(StorageKeys.AUTH.USER_DATA, JSON.stringify(response.data.data.user));
     }
     return response;
   },
@@ -103,15 +106,15 @@ export const AuthAPI = {
   register: async (data: RegisterRequest) => {
     const response = await api.post<AuthResponse>('/auth/register', data);
     if (response.data.data.token) {
-      await AsyncStorage.setItem('@auth_token', response.data.data.token);
-      await AsyncStorage.setItem('@user_data', JSON.stringify(response.data.data.user));
+      await AsyncStorage.setItem(StorageKeys.AUTH.TOKEN, response.data.data.token);
+      await AsyncStorage.setItem(StorageKeys.AUTH.USER_DATA, JSON.stringify(response.data.data.user));
     }
     return response;
   },
 
   logout: async () => {
     await api.post('/auth/logout');
-    await AsyncStorage.multiRemove(['@auth_token', '@user_data']);
+    await AsyncStorage.multiRemove([StorageKeys.AUTH.TOKEN, StorageKeys.AUTH.USER_DATA]);
   },
 
   forgotPassword: async (email: string) => {

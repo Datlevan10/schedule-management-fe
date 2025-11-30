@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import { API_CONFIG } from "../config/api";
+import { StorageKeys } from "../constants";
 
 // API Configuration using centralized config
 const getBaseURL = () => {
@@ -25,7 +26,7 @@ const getBaseURL = () => {
 };
 
 const API_BASE_URL = getBaseURL();
-const TOKEN_KEY = "@auth_token";
+const TOKEN_KEY = StorageKeys.AUTH.TOKEN;
 
 interface ApiResponse<T = any> {
   data: T;
