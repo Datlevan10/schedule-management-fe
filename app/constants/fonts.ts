@@ -93,6 +93,11 @@ export const Typography = {
     fontWeight: FontWeights.normal,
     lineHeight: 20,
   },
+  body3: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.normal,
+    lineHeight: 20,
+  },
   caption: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.normal,
