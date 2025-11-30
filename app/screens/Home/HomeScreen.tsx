@@ -157,7 +157,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Chào mừng trở lại,</Text>
-          <Text style={styles.userName}>{user?.name || 'Nguyen Van A'}! 👋</Text>
+          <Text style={styles.userName}>{user?.name || 'User'}! 👋</Text>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Text style={styles.notificationIcon}>🔔</Text>

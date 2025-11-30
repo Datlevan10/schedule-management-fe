@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -34,28 +34,31 @@ export default function ProfileScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
-  
+
   // Get user data from useAuth hook (for user ID)
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    // Load profile - for now, use a hardcoded user ID since we don't need authentication
-    // You can later modify this to get user ID from navigation params or other source
-    const userId = user?.id || 3; // Default to user ID 3 as per your example
-    console.log('✅ Loading profile for user ID:', userId);
-    loadUserProfile(userId);
+    // Only load profile if user is authenticated and has an ID
+    if (user?.id) {
+      console.log('✅ Loading profile for authenticated user ID:', user.id);
+      loadUserProfile(user.id);
+    } else {
+      console.log('❌ No authenticated user found, cannot load profile');
+      setLoading(false);
+    }
   }, [user?.id]);
 
   const loadUserProfile = useCallback(async (userId: number) => {
     try {
       setLoading(true);
       console.log('🔍 Loading user profile for user ID:', userId);
-      
+
       // Use the /users/{id} endpoint with user ID
       const response = await UserAPI.getUserProfile(userId);
-      
+
       console.log('📦 Profile API Response:', response);
-      
+
       if (response.success && response.data) {
         setUserProfile(response.data);
         setNotifications(response.data.notification_preferences?.push_notifications ?? true);
@@ -65,7 +68,7 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('❌ Error loading user profile:', error);
-      
+
       // Handle different types of errors without redirecting to login
       if (error.response?.status === 404) {
         Alert.alert(
@@ -112,10 +115,10 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               console.log('🚪 Logging out user...');
-              
+
               // Clear user data from auth hook
               await logout();
-              
+
               console.log('✅ Logout successful');
               router.replace('/auth/login');
             } catch (error) {
@@ -153,13 +156,13 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <Text style={styles.errorText}>Không thể tải hồ sơ</Text>
-        <Button 
-          title="Thử lại" 
+        <Button
+          title="Thử lại"
           onPress={() => {
             const userId = user?.id || 3;
             loadUserProfile(userId);
-          }} 
-          style={styles.retryButton} 
+          }}
+          style={styles.retryButton}
         />
       </View>
     );
