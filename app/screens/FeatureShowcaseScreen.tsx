@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   title: {
-    ...Typography.h1,
+    ...Typography.h2,
     color: Colors.white,
     textAlign: 'center',
     marginBottom: 12,
