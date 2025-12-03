@@ -11,7 +11,9 @@ import {
   View,
 } from 'react-native';
 import { SvgUri } from 'react-native-svg';
-import { ShareIcon } from '../components/icons/ShareIcon';
+import { ShareNewIcon } from '../components/icons/ShareNewIcon';
+import { SaveContactIcon } from '../components/icons/SaveContactIcon';
+import { SplitMoneyIcon } from '../components/icons/SplitMoneyIcon';
 import { Colors } from '../constants';
 
 interface TransactionData {
@@ -155,17 +157,17 @@ export default function TransactionReceiptScreen() {
       <View style={styles.bottomButtonsContainer}>
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="open-in-new" size={25} color="black" />
+            <ShareNewIcon size={25} color="black" />
             <Text style={styles.actionText}>Chia sẻ</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
-            <MaterialIcons name="contact-page" size={25} color="black" />
+            <SaveContactIcon size={25} color="black" />
             <Text style={styles.actionText}>Lưu người nhận</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
-            <ShareIcon size={25} color="black" />
+            <SplitMoneyIcon size={25} color="black" />
             <Text style={styles.actionText}>Chia tiền</Text>
           </TouchableOpacity>
         </View>
