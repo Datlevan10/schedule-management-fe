@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { AdminDashboardAPI, type DashboardStatistics } from '../api/admin-dashboard.api';
 import { Colors, Typography } from '../constants';
 
 /**
@@ -30,7 +32,7 @@ import { Colors, Typography } from '../constants';
  * - GET /api/admin/dashboard/ai-insights - for AI-generated insights
  */
 
-// Mock data interfaces
+// Chart data interface
 interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
@@ -55,16 +57,18 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 1247,
-    activeUsers: 892,
-    newUsersThisWeek: 43,
-    totalTasks: 8934,
-    completedTasks: 6789,
-    pendingTasks: 2145,
-    aiAnalyzedTasks: 7821,
-    totalSchedules: 3456,
-    activeSchedules: 2890,
+    totalUsers: 0,
+    activeUsers: 0,
+    newUsersThisWeek: 0,
+    totalTasks: 0,
+    completedTasks: 0,
+    pendingTasks: 0,
+    aiAnalyzedTasks: 0,
+    totalSchedules: 0,
+    activeSchedules: 0,
   });
+  const [dashboardData, setDashboardData] = useState<DashboardStatistics | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [userGrowthData] = useState<ChartData[]>([
     { label: 'Jan', value: 120, color: Colors.primary },
@@ -75,31 +79,61 @@ export default function DashboardScreen() {
     { label: 'Jun', value: 520, color: Colors.primary },
   ]);
 
-  const [taskAnalyticsData] = useState<ChartData[]>([
-    { label: 'Completed', value: stats.completedTasks, color: Colors.success },
-    { label: 'Pending', value: stats.pendingTasks, color: Colors.warning },
-    { label: 'AI Analyzed', value: stats.aiAnalyzedTasks, color: Colors.info || '#3498db' },
-  ]);
+  // Task analytics data based on real API data
+  const taskAnalyticsData: ChartData[] = [
+    { label: 'Hoàn thành', value: stats.completedTasks, color: Colors.success },
+    { label: 'Đang tiến hành', value: dashboardData?.tasks.in_progress || 0, color: Colors.warning },
+    { label: 'Đã lên lịch', value: dashboardData?.tasks.scheduled || 0, color: Colors.primary },
+    { label: 'Đã hủy', value: dashboardData?.tasks.cancelled || 0, color: Colors.danger || '#e74c3c' },
+    { label: 'Đã hoãn lại', value: dashboardData?.tasks.postponed || 0, color: Colors.info || '#3498db' },
+  ];
 
-  // Mock data loading function
+  // Load dashboard data from API
   const loadDashboardData = useCallback(async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      setError(null);
+      console.log('🔍 Loading dashboard data from API...');
 
-      // In real implementation, you would call your API here
-      // const response = await AdminAPI.getDashboardStats();
-      // setStats(response.data);
+      const response = await AdminDashboardAPI.getStatistics();
+      console.log('✅ Dashboard data loaded:', response.data);
 
-      // For now, we'll randomly update some values to show dynamic data
-      setStats(prev => ({
-        ...prev,
-        totalUsers: prev.totalUsers + Math.floor(Math.random() * 5),
-        newUsersThisWeek: Math.floor(Math.random() * 50) + 30,
-        activeUsers: prev.activeUsers + Math.floor(Math.random() * 10) - 5,
-      }));
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      if (response.status === 'success' && response.data) {
+        setDashboardData(response.data);
+
+        // Map API data to local stats format
+        const mappedStats: DashboardStats = {
+          totalUsers: response.data.users.total,
+          activeUsers: response.data.users.active,
+          newUsersThisWeek: response.data.users.this_week,
+          totalTasks: response.data.tasks.total,
+          completedTasks: response.data.tasks.completed,
+          pendingTasks: response.data.tasks.scheduled + response.data.tasks.in_progress,
+          aiAnalyzedTasks: response.data.tasks.manual_tasks,
+          totalSchedules: response.data.tasks.total,
+          activeSchedules: response.data.tasks.in_progress + response.data.tasks.scheduled,
+        };
+
+        setStats(mappedStats);
+        console.log('✅ Stats mapped successfully:', mappedStats);
+      } else {
+        throw new Error(response.message || 'Failed to load dashboard data');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading dashboard data:', error);
+      setError(error.message || 'Failed to load dashboard data');
+
+      // Fallback to demo data if API fails
+      setStats({
+        totalUsers: 1247,
+        activeUsers: 892,
+        newUsersThisWeek: 43,
+        totalTasks: 8934,
+        completedTasks: 6789,
+        pendingTasks: 2145,
+        aiAnalyzedTasks: 7821,
+        totalSchedules: 3456,
+        activeSchedules: 2890,
+      });
     }
   }, []);
 
@@ -120,6 +154,23 @@ export default function DashboardScreen() {
     await loadDashboardData();
     setRefreshing(false);
   }, [loadDashboardData]);
+
+  // Navigation functions
+  const handleNavigateToUsers = () => {
+    router.push('/admin/users');
+  };
+
+  const handleNavigateToReports = () => {
+    router.push('/admin/analytics');
+  };
+
+  const handleNavigateToSettings = () => {
+    router.push('/admin/settings');
+  };
+
+  const handleNavigateToNotifications = () => {
+    router.push('/admin/notifications');
+  };
 
   const StatCard = ({ title, value, subtitle, icon, color, trend }: {
     title: string;
@@ -214,6 +265,11 @@ export default function DashboardScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Đang tải dữ liệu dashboard...</Text>
+        {error && (
+          <Text style={styles.errorText}>
+            {error}
+          </Text>
+        )}
       </View>
     );
   }
@@ -289,34 +345,38 @@ export default function DashboardScreen() {
 
       {/* AI Insights Section */}
       <View style={styles.aiSection}>
-        <Text style={styles.sectionTitle}>🤖 AI Insights</Text>
+        <Text style={styles.sectionTitle}>🤖 Thông tin chi tiết về AI</Text>
         <View style={styles.insightCard}>
           <View style={styles.insightHeader}>
             <Ionicons name="bulb-outline" size={20} color={Colors.warning} />
-            <Text style={styles.insightTitle}>Xu hướng sử dụng</Text>
+            <Text style={styles.insightTitle}>Thống kê người dùng</Text>
           </View>
           <Text style={styles.insightText}>
-            AI đã phân tích {aiAnalysisRate}% task và phát hiện người dùng thường tạo task vào buổi sáng (70%) và có xu hướng hoàn thành task trong 2-3 ngày.
+            Có {stats.totalUsers.toLocaleString()} người dùng tổng cộng, trong đó {userActiveRate}% đang hoạt động tích cực.
+            Tuần này có {stats.newUsersThisWeek} người dùng mới đăng ký.
           </Text>
         </View>
 
         <View style={styles.insightCard}>
           <View style={styles.insightHeader}>
             <Ionicons name="trending-up-outline" size={20} color={Colors.success} />
-            <Text style={styles.insightTitle}>Dự đoán tăng trưởng</Text>
+            <Text style={styles.insightTitle}>Thống kê task</Text>
           </View>
           <Text style={styles.insightText}>
-            Dự kiến người dùng mới sẽ tăng 25% trong tháng tới dựa trên xu hướng hiện tại và độ tương tác của người dùng.
+            Có {stats.totalTasks.toLocaleString()} task tổng cộng với tỷ lệ hoàn thành {taskCompletionRate}%.
+            {dashboardData?.tasks.manual_tasks.toLocaleString()} task được tạo thủ công.
           </Text>
         </View>
 
         <View style={styles.insightCard}>
           <View style={styles.insightHeader}>
             <Ionicons name="time-outline" size={20} color={Colors.info || '#3498db'} />
-            <Text style={styles.insightTitle}>Hiệu suất hệ thống</Text>
+            <Text style={styles.insightTitle}>Hoạt động gần đây</Text>
           </View>
           <Text style={styles.insightText}>
-            Thời gian phản hồi trung bình: 0.8s. AI xử lý task tự động với độ chính xác 94.2%.
+            {dashboardData?.recent_activity.recent_users.length || 0} người dùng mới trong tuần.
+            {dashboardData?.recent_activity.recent_tasks.length || 0} task được tạo gần đây.
+            Tỷ lệ hoàn thành: {dashboardData?.summary.completion_rate || 0}%.
           </Text>
         </View>
       </View>
@@ -325,19 +385,31 @@ export default function DashboardScreen() {
       <View style={styles.actionsSection}>
         <Text style={styles.sectionTitle}>⚡ Thao tác nhanh</Text>
         <View style={styles.actionGrid}>
-          <TouchableOpacity style={[styles.actionCard, { borderColor: Colors.primary }]}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { borderColor: Colors.primary }]}
+            onPress={handleNavigateToUsers}
+          >
             <Ionicons name="people-outline" size={24} color={Colors.primary} />
             <Text style={styles.actionText}>Quản lý Users</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionCard, { borderColor: Colors.success }]}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { borderColor: Colors.success }]}
+            onPress={handleNavigateToReports}
+          >
             <Ionicons name="analytics-outline" size={24} color={Colors.success} />
             <Text style={styles.actionText}>Xem báo cáo</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionCard, { borderColor: Colors.warning }]}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { borderColor: Colors.warning }]}
+            onPress={handleNavigateToSettings}
+          >
             <Ionicons name="settings-outline" size={24} color={Colors.warning} />
             <Text style={styles.actionText}>Cài đặt</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionCard, { borderColor: Colors.info || '#3498db' }]}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { borderColor: Colors.info || '#3498db' }]}
+            onPress={handleNavigateToNotifications}
+          >
             <Ionicons name="notifications-outline" size={24} color={Colors.info || '#3498db'} />
             <Text style={styles.actionText}>Thông báo</Text>
           </TouchableOpacity>
@@ -362,6 +434,13 @@ const styles = StyleSheet.create({
     ...Typography.body1,
     color: Colors.text.secondary,
     marginTop: 16,
+  },
+  errorText: {
+    ...Typography.body2,
+    color: Colors.danger || '#e74c3c',
+    marginTop: 12,
+    textAlign: 'center',
+    paddingHorizontal: 16,
   },
   header: {
     paddingHorizontal: 20,

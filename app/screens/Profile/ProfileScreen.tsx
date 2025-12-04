@@ -120,12 +120,12 @@ export default function ProfileScreen() {
               await logout();
 
               console.log('✅ Logout successful');
-              router.replace('/auth/login');
+              router.replace('/welcome');
             } catch (error) {
               console.error('❌ Logout error:', error);
               // Even if logout fails, clear local storage and redirect
               await AsyncStorage.clear();
-              router.replace('/auth/login');
+              router.replace('/welcome');
             }
           },
         },

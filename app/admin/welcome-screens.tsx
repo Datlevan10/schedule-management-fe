@@ -12,7 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { AdminAPI, WelcomeScreen } from '../api/admin.api';
 import { API_CONFIG } from '../config/api';
@@ -28,10 +28,20 @@ export default function WelcomeScreensScreen() {
   const [formData, setFormData] = useState({
     title: '',
     subtitle: '',
+    description: '',
+    image_url: '',
+    button_text: 'Get Started',
+    button_action: 'navigate_to_dashboard',
+    background_color: '#3498db',
+    text_color: '#ffffff',
+    is_active: true,
+    display_order: 1,
+    target_audience: 'all_users' as 'all_users' | 'new_users' | 'existing_users',
+    
+    // Legacy fields for backward compatibility
     background_type: 'image' as 'image' | 'color' | 'gradient',
     background_value: '',
     duration: 5,
-    is_active: true,
   });
 
   useEffect(() => {
@@ -66,10 +76,20 @@ export default function WelcomeScreensScreen() {
     setFormData({
       title: '',
       subtitle: '',
+      description: '',
+      image_url: '',
+      button_text: 'Get Started',
+      button_action: 'navigate_to_dashboard',
+      background_color: '#3498db',
+      text_color: '#ffffff',
+      is_active: true,
+      display_order: 1,
+      target_audience: 'all_users',
+      
+      // Legacy fields
       background_type: 'image',
       background_value: '',
       duration: 5,
-      is_active: true,
     });
     setShowModal(true);
   };
@@ -77,12 +97,22 @@ export default function WelcomeScreensScreen() {
   const openEditModal = (screen: WelcomeScreen) => {
     setEditingScreen(screen);
     setFormData({
-      title: screen.title,
-      subtitle: screen.subtitle,
-      background_type: screen.background_type,
-      background_value: screen.background_value,
-      duration: screen.duration,
-      is_active: screen.is_active,
+      title: screen.title || '',
+      subtitle: screen.subtitle || '',
+      description: screen.description || '',
+      image_url: screen.image_url || screen.background_value || '',
+      button_text: screen.button_text || 'Get Started',
+      button_action: screen.button_action || 'navigate_to_dashboard',
+      background_color: screen.background_color || '#3498db',
+      text_color: screen.text_color || '#ffffff',
+      is_active: screen.is_active ?? true,
+      display_order: screen.display_order || 1,
+      target_audience: screen.target_audience || 'all_users',
+      
+      // Legacy fields for backward compatibility
+      background_type: screen.background_type || 'image',
+      background_value: screen.background_value || screen.image_url || '',
+      duration: screen.duration || 5,
     });
     setShowModal(true);
   };
@@ -118,21 +148,56 @@ export default function WelcomeScreensScreen() {
         return;
       }
 
+      console.log('💾 Saving welcome screen with data:', formData);
+
+      // Prepare data for the new API structure
+      const dataToSave = {
+        title: formData.title.trim(),
+        subtitle: formData.subtitle.trim(),
+        description: formData.description?.trim() || formData.subtitle.trim(),
+        image_url: formData.image_url || formData.background_value || '',
+        button_text: formData.button_text || 'Get Started',
+        button_action: formData.button_action || 'navigate_to_dashboard',
+        background_color: formData.background_color || '#3498db',
+        text_color: formData.text_color || '#ffffff',
+        is_active: formData.is_active,
+        display_order: formData.display_order || 1,
+        target_audience: formData.target_audience || 'all_users',
+        
+        // Include legacy fields for backward compatibility
+        background_type: formData.background_type || 'image',
+        background_value: formData.background_value || formData.image_url || '',
+        duration: formData.duration || 5,
+      };
+
+      console.log('📤 Sending data to API:', dataToSave);
+
       let response;
       if (editingScreen) {
-        response = await AdminAPI.updateWelcomeScreen(editingScreen.id, formData);
+        response = await AdminAPI.updateWelcomeScreen(editingScreen.id, dataToSave);
       } else {
-        response = await AdminAPI.createWelcomeScreen(formData);
+        response = await AdminAPI.createWelcomeScreen(dataToSave);
       }
 
+      console.log('📥 API Response:', response);
+
       if (response.status === 'success') {
-        Alert.alert('Success', `Welcome screen ${editingScreen ? 'updated' : 'created'} successfully`);
-        closeModal();
-        loadWelcomeScreens();
+        Alert.alert('Thành công', `Màn hình chào mừng đã được ${editingScreen ? 'cập nhật' : 'tạo'} thành công!`, [
+          {
+            text: 'OK',
+            onPress: () => {
+              closeModal();
+              loadWelcomeScreens();
+            }
+          }
+        ]);
+      } else {
+        Alert.alert('Lỗi', 'Không thể lưu màn hình chào mừng. Vui lòng thử lại.');
       }
     } catch (error: any) {
-      console.error('Error saving welcome screen:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to save welcome screen');
+      console.error('❌ Error saving welcome screen:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save welcome screen';
+      Alert.alert('Lỗi', errorMessage);
     }
   };
 
@@ -573,14 +638,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 12,
     margin: 20,
-    maxHeight: '80%',
+    maxHeight: '90%',
     width: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
@@ -589,7 +654,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   formContainer: {
-    padding: 20,
+    padding: 16,
   },
   inputGroup: {
     marginBottom: 16,
@@ -597,14 +662,14 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.body1,
     color: Colors.text.primary,
-    marginBottom: 8,
+    marginBottom: 6,
     fontWeight: '600',
   },
   textInput: {
     borderWidth: 1,
     borderColor: Colors.border.light,
     borderRadius: 8,
-    padding: 12,
+    padding: 8,
     backgroundColor: Colors.background.secondary,
     ...Typography.body1,
   },
@@ -629,7 +694,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     borderStyle: 'dashed',
     borderRadius: 8,
-    padding: 16,
+    padding: 12,
     gap: 8,
   },
   imageButtonText: {
@@ -648,7 +713,7 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
     gap: 12,

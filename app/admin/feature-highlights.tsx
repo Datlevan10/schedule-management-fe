@@ -126,10 +126,24 @@ export default function FeatureHighlightsScreen() {
         });
       }
 
-      if (response.data.success) {
-        Alert.alert('Thành công', editingFeature ? 'Đã cập nhật tính năng' : 'Đã tạo tính năng mới');
-        handleCloseModal();
-        loadFeatures();
+      console.log('💾 Feature save response:', response.data);
+      
+      if (response.data.success || response.data.status === 'success' || response.status === 200) {
+        const successMessage = editingFeature 
+          ? 'Tính năng đã được cập nhật thành công!' 
+          : 'Tính năng mới đã được tạo thành công!';
+          
+        Alert.alert('Thành công', successMessage, [
+          {
+            text: 'OK',
+            onPress: () => {
+              handleCloseModal();
+              loadFeatures();
+            }
+          }
+        ]);
+      } else {
+        Alert.alert('Lỗi', 'Không thể lưu tính năng. Vui lòng thử lại.');
       }
     } catch (error: any) {
       console.error('Error saving feature:', error);
@@ -164,13 +178,21 @@ export default function FeatureHighlightsScreen() {
           onPress: async () => {
             try {
               const response = await api.delete(`/feature-highlights/${feature.id}`);
-              if (response.data.success) {
-                Alert.alert('Thành công', 'Đã xóa tính năng');
-                loadFeatures();
+              console.log('🗑️ Feature delete response:', response.data);
+              
+              if (response.data.success || response.data.status === 'success' || response.status === 200) {
+                Alert.alert('Thành công', `Tính năng "${feature.title}" đã được xóa thành công!`, [
+                  {
+                    text: 'OK',
+                    onPress: () => loadFeatures()
+                  }
+                ]);
+              } else {
+                Alert.alert('Lỗi', 'Không thể xóa tính năng. Vui lòng thử lại.');
               }
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error deleting feature:', error);
-              Alert.alert('Lỗi', 'Không thể xóa tính năng');
+              Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xóa tính năng');
             }
           },
         },

@@ -15,17 +15,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
+import { CreateManualTaskRequest, ManualTasksAPI } from '../../api/manual-tasks.api';
 import {
   CreateScheduleImportRequest,
   ScheduleImport,
   ScheduleImportNewAPI,
   ScheduleImportTemplate,
 } from '../../api/schedule-import-new.api';
-import { EventsAPI, CreateEventRequest } from '../../api/events.api';
-import { ManualTasksAPI, CreateManualTaskRequest } from '../../api/manual-tasks.api';
 import { Button, Card } from '../../components/common';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks';
@@ -128,7 +128,7 @@ export default function CreateTaskScreen() {
       // Map frontend priority values to backend expected values
       const priorityLabelMapping: { [key: string]: 'low' | 'medium' | 'high' | 'urgent' } = {
         'Thấp': 'low',
-        'Trung bình': 'medium', 
+        'Trung bình': 'medium',
         'Cao': 'high',
         'Khẩn cấp': 'urgent'
       };
@@ -136,7 +136,7 @@ export default function CreateTaskScreen() {
       // Map priority to numeric values (1-5)
       const priorityNumericMapping: { [key: string]: number } = {
         'Thấp': 2,
-        'Trung bình': 3, 
+        'Trung bình': 3,
         'Cao': 4,
         'Khẩn cấp': 5
       };
@@ -144,7 +144,7 @@ export default function CreateTaskScreen() {
       // Create datetime strings for start_datetime and end_datetime
       const startDateTime = new Date(date);
       startDateTime.setHours(time.getHours(), time.getMinutes(), time.getSeconds());
-      
+
       // Default end time to 1 hour after start time if not specified
       const endDateTime = new Date(startDateTime);
       endDateTime.setHours(startDateTime.getHours() + 1);
@@ -161,11 +161,11 @@ export default function CreateTaskScreen() {
       };
 
       // Parse participants and requirements from comma-separated strings
-      const participantsList = participants.trim() 
+      const participantsList = participants.trim()
         ? participants.split(',').map(p => p.trim()).filter(p => p.length > 0)
         : [];
-      
-      const requirementsList = requirements.trim() 
+
+      const requirementsList = requirements.trim()
         ? requirements.split(',').map(r => r.trim()).filter(r => r.length > 0)
         : [];
 
@@ -192,13 +192,23 @@ export default function CreateTaskScreen() {
       };
 
       console.log('📤 Sending manual task data:', JSON.stringify(taskData, null, 2));
-      
+
       const response = await ManualTasksAPI.create(taskData);
 
-      if (response.success) {
+      console.log('✅ Manual task creation response:', response);
+
+      // Handle different response formats
+      const isSuccess = response.success ||
+        response.status === 'success';
+
+      if (isSuccess) {
+        const successMessage = response.data?.message ||
+          response.message ||
+          'Manual task created successfully';
+
         Alert.alert(
           'Tạo nhiệm vụ thành công',
-          `Nhiệm vụ "${title}" đã được tạo thành công.`,
+          `Nhiệm vụ "${title}" đã được tạo thành công.\n\n${successMessage}`,
           [
             {
               text: 'Xem lịch trình',
@@ -221,11 +231,14 @@ export default function CreateTaskScreen() {
             },
           ]
         );
+      } else {
+        console.log('❌ Unexpected response format:', response);
+        Alert.alert('Error', 'Task creation response was not in expected format');
       }
     } catch (error: any) {
       console.error('Error creating manual task:', error);
       console.error('Error response:', error.response?.data);
-      
+
       // Show detailed error message
       let errorMessage = 'Failed to create manual task';
       if (error.response?.data?.message) {
@@ -233,12 +246,12 @@ export default function CreateTaskScreen() {
       } else if (error.response?.data?.errors) {
         // Handle validation errors
         const errors = error.response.data.errors;
-        const errorDetails = Object.entries(errors).map(([field, msgs]) => 
+        const errorDetails = Object.entries(errors).map(([field, msgs]) =>
           `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`
         ).join('\n');
         errorMessage = `Validation errors:\n${errorDetails}`;
       }
-      
+
       Alert.alert('Error', errorMessage);
     }
   };
@@ -387,6 +400,10 @@ export default function CreateTaskScreen() {
   };
 
   // Helper Functions
+  const closeAllDropdowns = () => {
+    setShowCategoryDropdown(false);
+    setShowPriorityDropdown(false);
+  };
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return 'Unknown size';
     const kb = bytes / 1024;
@@ -446,137 +463,150 @@ export default function CreateTaskScreen() {
 
   const renderManualTaskForm = () => (
     <>
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Chi tiết nhiệm vụ</Text>
+      <TouchableWithoutFeedback onPress={closeAllDropdowns}>
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Chi tiết nhiệm vụ</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Tiêu đề nhiệm vụ *"
-          value={title}
-          onChangeText={setTitle}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Tiêu đề nhiệm vụ *"
+            placeholderTextColor={Colors.text.secondary}
+            value={title}
+            onChangeText={setTitle}
+          />
 
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Mô tả (tùy chọn)"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-        />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Mô tả (tùy chọn)"
+            placeholderTextColor={Colors.text.secondary}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={3}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Địa điểm (tùy chọn)"
-          value={location}
-          onChangeText={setLocation}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Địa điểm (tùy chọn)"
+            placeholderTextColor={Colors.text.secondary}
+            value={location}
+            onChangeText={setLocation}
+          />
 
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Người tham gia (phân cách bằng dấu phẩy)"
-          value={participants}
-          onChangeText={setParticipants}
-          multiline
-          numberOfLines={2}
-        />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Người tham gia (phân cách bằng dấu phẩy)"
+            placeholderTextColor={Colors.text.secondary}
+            value={participants}
+            onChangeText={setParticipants}
+            multiline
+            numberOfLines={2}
+          />
 
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Yêu cầu cần thiết (phân cách bằng dấu phẩy)"
-          value={requirements}
-          onChangeText={setRequirements}
-          multiline
-          numberOfLines={2}
-        />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Yêu cầu cần thiết (phân cách bằng dấu phẩy)"
+            placeholderTextColor={Colors.text.secondary}
+            value={requirements}
+            onChangeText={setRequirements}
+            multiline
+            numberOfLines={2}
+          />
 
-        <View style={styles.dateTimeRow}>
-          <TouchableOpacity
-            style={[styles.input, styles.dateTimeInput]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateTimeText}>📅 {date.toLocaleDateString()}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.input, styles.dateTimeInput]}
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Text style={styles.dateTimeText}>⏰ {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Category, Priority, Reminder Selectors */}
-        <View style={styles.pickerRow}>
-          <Text style={styles.pickerLabel}>Ngành:</Text>
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity 
-              style={styles.picker}
-              onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+          <View style={styles.dateTimeRow}>
+            <TouchableOpacity
+              style={[styles.input, styles.dateTimeInput]}
+              onPress={() => setShowDatePicker(true)}
             >
-              <Text style={styles.pickerText}>{category}</Text>
-              <Text style={styles.dropdownArrow}>{showCategoryDropdown ? '▲' : '▼'}</Text>
+              <Text style={styles.dateTimeText}>📅 {date.toLocaleDateString()}</Text>
             </TouchableOpacity>
-            {showCategoryDropdown && (
-              <View style={styles.dropdownList}>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.dropdownItem,
-                      cat === category && styles.selectedDropdownItem
-                    ]}
-                    onPress={() => {
-                      setCategory(cat);
-                      setShowCategoryDropdown(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.dropdownItemText,
-                      cat === category && styles.selectedDropdownItemText
-                    ]}>{cat}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
 
-        <View style={styles.pickerRow}>
-          <Text style={styles.pickerLabel}>Sự ưu tiên:</Text>
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity 
-              style={styles.picker}
-              onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}
+            <TouchableOpacity
+              style={[styles.input, styles.dateTimeInput]}
+              onPress={() => setShowTimePicker(true)}
             >
-              <Text style={styles.pickerText}>{priority}</Text>
-              <Text style={styles.dropdownArrow}>{showPriorityDropdown ? '▲' : '▼'}</Text>
+              <Text style={styles.dateTimeText}>⏰ {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </TouchableOpacity>
-            {showPriorityDropdown && (
-              <View style={styles.dropdownList}>
-                {priorities.map((prio) => (
-                  <TouchableOpacity
-                    key={prio}
-                    style={[
-                      styles.dropdownItem,
-                      prio === priority && styles.selectedDropdownItem
-                    ]}
-                    onPress={() => {
-                      setPriority(prio);
-                      setShowPriorityDropdown(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.dropdownItemText,
-                      prio === priority && styles.selectedDropdownItemText
-                    ]}>{prio}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
           </View>
-        </View>
-      </Card>
+
+          {/* Category, Priority, Reminder Selectors */}
+          <View style={styles.pickerRow}>
+            <Text style={styles.pickerLabel}>Ngành:</Text>
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity
+                style={styles.picker}
+                onPress={() => {
+                  setShowCategoryDropdown(!showCategoryDropdown);
+                  setShowPriorityDropdown(false);
+                }}
+              >
+                <Text style={styles.pickerText}>{category}</Text>
+                <Text style={styles.dropdownArrow}>{showCategoryDropdown ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+              {showCategoryDropdown && (
+                <View style={styles.dropdownList}>
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.dropdownItem,
+                        cat === category && styles.selectedDropdownItem
+                      ]}
+                      onPress={() => {
+                        setCategory(cat);
+                        setShowCategoryDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        cat === category && styles.selectedDropdownItemText
+                      ]}>{cat}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.pickerRow}>
+            <Text style={styles.pickerLabel}>Sự ưu tiên:</Text>
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity
+                style={styles.picker}
+                onPress={() => {
+                  setShowPriorityDropdown(!showPriorityDropdown);
+                  setShowCategoryDropdown(false);
+                }}
+              >
+                <Text style={styles.pickerText}>{priority}</Text>
+                <Text style={styles.dropdownArrow}>{showPriorityDropdown ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+              {showPriorityDropdown && (
+                <View style={styles.dropdownList}>
+                  {priorities.map((prio) => (
+                    <TouchableOpacity
+                      key={prio}
+                      style={[
+                        styles.dropdownItem,
+                        prio === priority && styles.selectedDropdownItem
+                      ]}
+                      onPress={() => {
+                        setPriority(prio);
+                        setShowPriorityDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        prio === priority && styles.selectedDropdownItemText
+                      ]}>{prio}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        </Card>
+      </TouchableWithoutFeedback>
 
       <Button
         title="Tạo nhiệm vụ"
@@ -912,6 +942,7 @@ const styles = StyleSheet.create({
     margin: 20,
     marginTop: 0,
     padding: 20,
+    overflow: 'visible',
   },
   sectionTitle: {
     ...Typography.h3,
@@ -966,6 +997,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     ...Typography.body1,
     color: Colors.text.primary,
+    backgroundColor: Colors.background.primary,
+    fontSize: 16,
   },
   textArea: {
     minHeight: 80,
@@ -988,6 +1021,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    zIndex: 1000,
+    overflow: 'visible',
   },
   pickerLabel: {
     ...Typography.body2,
@@ -1012,6 +1047,7 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     flex: 1,
     position: 'relative',
+    zIndex: 1001,
   },
   dropdownArrow: {
     ...Typography.body1,
@@ -1030,12 +1066,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     maxHeight: 200,
-    zIndex: 1000,
-    elevation: 5,
+    zIndex: 9999,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   dropdownItem: {
     padding: 12,

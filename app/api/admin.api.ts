@@ -129,12 +129,30 @@ export interface WelcomeScreen {
   id: number;
   title: string;
   subtitle: string;
-  background_type: 'image' | 'color' | 'gradient';
-  background_value: string;
-  duration: number;
+  description: string;
+  image_url?: string;
+  video_url?: string;
+  thumbnail_url?: string;
+  button_text: string;
+  button_action: string;
+  secondary_button_text?: string;
+  secondary_button_action?: string;
+  background_color: string;
+  text_color: string;
   is_active: boolean;
+  display_order: number;
+  target_audience: 'all_users' | 'new_users' | 'existing_users';
+  start_date?: string;
+  end_date?: string;
+  content?: Record<string, any>;
+  metadata?: Record<string, any>;
   created_at: string;
   updated_at: string;
+  
+  // Legacy fields for backward compatibility
+  background_type?: 'image' | 'color' | 'gradient';
+  background_value?: string;
+  duration?: number;
 }
 
 export interface ApiResponse<T> {
@@ -328,7 +346,7 @@ export const AdminAPI = {
   // Welcome Screen Management
   getWelcomeScreens: async (): Promise<StandardApiResponse<WelcomeScreen[]>> => {
     try {
-      const response = await api.get<StandardApiResponse<WelcomeScreen[]>>('/welcome-screen');
+      const response = await api.get<StandardApiResponse<WelcomeScreen[]>>('/welcome-screens');
       return response.data;
     } catch (error) {
       console.error('Error fetching welcome screens:', error);
@@ -338,7 +356,7 @@ export const AdminAPI = {
 
   getWelcomeScreen: async (id: number): Promise<StandardApiResponse<WelcomeScreen>> => {
     try {
-      const response = await api.get<StandardApiResponse<WelcomeScreen>>(`/welcome-screen/${id}`);
+      const response = await api.get<StandardApiResponse<WelcomeScreen>>(`/welcome-screens/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching welcome screen:', error);
@@ -348,7 +366,10 @@ export const AdminAPI = {
 
   createWelcomeScreen: async (data: Partial<WelcomeScreen>): Promise<StandardApiResponse<WelcomeScreen>> => {
     try {
-      const response = await api.post<StandardApiResponse<WelcomeScreen>>('/welcome-screen', data);
+      const endpoint = '/welcome-screens';
+      console.log('🔗 Calling createWelcomeScreen endpoint:', endpoint);
+      console.log('📝 Create data:', data);
+      const response = await api.post<StandardApiResponse<WelcomeScreen>>(endpoint, data);
       return response.data;
     } catch (error) {
       console.error('Error creating welcome screen:', error);
@@ -358,7 +379,10 @@ export const AdminAPI = {
 
   updateWelcomeScreen: async (id: number, data: Partial<WelcomeScreen>): Promise<StandardApiResponse<WelcomeScreen>> => {
     try {
-      const response = await api.put<StandardApiResponse<WelcomeScreen>>(`/welcome-screen/${id}`, data);
+      const endpoint = `/welcome-screens/${id}`;
+      console.log('🔗 Calling updateWelcomeScreen endpoint:', endpoint);
+      console.log('📝 Update data:', data);
+      const response = await api.put<StandardApiResponse<WelcomeScreen>>(endpoint, data);
       return response.data;
     } catch (error) {
       console.error('Error updating welcome screen:', error);
@@ -368,7 +392,7 @@ export const AdminAPI = {
 
   deleteWelcomeScreen: async (id: number): Promise<StandardApiResponse<null>> => {
     try {
-      const response = await api.delete<StandardApiResponse<null>>(`/welcome-screen/${id}`);
+      const response = await api.delete<StandardApiResponse<null>>(`/welcome-screens/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting welcome screen:', error);
