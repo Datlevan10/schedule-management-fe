@@ -134,7 +134,7 @@ export default function ProfileScreen() {
   }, [logout]);
 
   const menuItems = [
-    { icon: '👤', title: 'Chỉnh sửa hồ sơ', action: () => router.push('/profile/edit-profile') },
+    { icon: '👤', title: 'Chỉnh sửa hồ sơ', action: () => router.push(`/profile/edit-profile?userId=${user?.id}`) },
     { icon: '🔔', title: 'Cài đặt thông báo', action: () => router.push('/profile/notification-settings') },
     { icon: '🔒', title: 'Quyền riêng tư & Bảo mật', action: () => router.push('/profile/privacy-security') },
     { icon: '📊', title: 'Báo cáo hoạt động', action: () => router.push('/profile/activity-reports') },

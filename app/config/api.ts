@@ -6,10 +6,10 @@
 export const API_CONFIG = {
   // Base URLs for different environments
   BASE_URLS: {
-    DEVELOPMENT: "http://192.168.1.2:8000",
+    DEVELOPMENT: "http://192.168.1.8:8000",
     PRODUCTION: "https://api.scheduleapp.com",
     LOCALHOST: "http://127.0.0.2:8000",
-    LOCAL_IP: "http://192.168.1.2:8000", // Your machine's local WiFi IP (update this!)
+    LOCAL_IP: "http://192.168.1.8:8000", // Your machine's local WiFi IP (update this!)
     // Common Windows WiFi IP ranges:
     // 192.168.1.x (most home routers)
     // 192.168.0.x (some routers)
