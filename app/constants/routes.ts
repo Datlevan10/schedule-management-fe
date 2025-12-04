@@ -1,53 +1,53 @@
 export const Routes = {
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD: '/auth/reset-password',
+    LOGIN: "/auth/login",
+    REGISTER: "/auth/register",
+    FORGOT_PASSWORD: "/auth/forgot-password",
+    RESET_PASSWORD: "/auth/reset-password",
   },
-  
+
   MAIN: {
-    TABS: '/(tabs)',
-    SCHEDULE: '/(tabs)/schedule',
-    AI: '/(tabs)/ai',
-    REPORTS: '/(tabs)/reports',
-    PROFILE: '/(tabs)/profile',
+    TABS: "/(tabs)",
+    SCHEDULE: "/(tabs)/schedule",
+    AI: "/(tabs)/ai",
+    REPORTS: "/(tabs)/reports",
+    PROFILE: "/(tabs)/profile",
   },
-  
+
   SCHEDULE: {
-    LIST: '/schedule',
-    ADD: '/schedule/add',
-    EDIT: '/schedule/edit/[id]',
-    DETAIL: '/schedule/[id]',
+    LIST: "/schedule",
+    ADD: "/schedule/add",
+    EDIT: "/schedule/edit/[id]",
+    DETAIL: "/schedule/[id]",
   },
-  
+
   AI: {
-    SUGGESTIONS: '/ai/suggestions',
-    CHAT: '/ai/chat',
+    SUGGESTIONS: "/ai/suggestions",
+    CHAT: "/ai/chat",
   },
-  
+
   REPORTS: {
-    OVERVIEW: '/reports',
-    TIME_USAGE: '/reports/time-usage',
-    PRODUCTIVITY: '/reports/productivity',
-    ACTIVITY: '/reports/activity',
+    OVERVIEW: "/reports",
+    TIME_USAGE: "/reports/time-usage",
+    PRODUCTIVITY: "/reports/productivity",
+    ACTIVITY: "/reports/activity",
   },
-  
+
   PROFILE: {
-    MAIN: '/profile',
-    EDIT: '/profile/edit',
-    SETTINGS: '/profile/settings',
-    REMINDERS: '/profile/reminders',
+    MAIN: "/profile",
+    EDIT: "/profile/edit",
+    SETTINGS: "/profile/settings",
+    REMINDERS: "/profile/reminders",
   },
-  
+
   ONBOARDING: {
-    WELCOME: '/onboarding/welcome',
+    WELCOME: "/onboarding/welcome",
   },
-  
+
   MODAL: {
-    EVENT_FORM: '/modal/event-form',
-    AI_SUGGESTION: '/modal/ai-suggestion',
-    REMINDER_SETTINGS: '/modal/reminder-settings',
+    EVENT_FORM: "/modal/event-form",
+    AI_SUGGESTION: "/modal/ai-suggestion",
+    REMINDER_SETTINGS: "/modal/reminder-settings",
   },
 } as const;
 

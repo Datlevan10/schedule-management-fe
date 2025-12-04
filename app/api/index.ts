@@ -65,6 +65,10 @@ class ApiClient {
           if (adminToken) {
             config.headers.Authorization = `Bearer ${adminToken}`;
           }
+        } else if (config.url?.includes('/manual-tasks')) {
+          // No authentication required for manual tasks endpoints
+          // Remove any existing Authorization header
+          delete config.headers.Authorization;
         } else {
           // Use regular user token for non-admin endpoints
           const token = await AsyncStorage.getItem(TOKEN_KEY);

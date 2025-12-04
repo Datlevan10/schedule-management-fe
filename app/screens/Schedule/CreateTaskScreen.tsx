@@ -25,8 +25,10 @@ import {
   ScheduleImportTemplate,
 } from '../../api/schedule-import-new.api';
 import { EventsAPI, CreateEventRequest } from '../../api/events.api';
+import { ManualTasksAPI, CreateManualTaskRequest } from '../../api/manual-tasks.api';
 import { Button, Card } from '../../components/common';
 import { Colors, Typography } from '../../constants';
+import { useAuth } from '../../hooks';
 import { FileDownloadManager } from '../../utils/fileDownload';
 
 type CreateMethod = 'manual' | 'import';
@@ -44,9 +46,15 @@ export default function CreateTaskScreen() {
   // Method Selection
   const [createMethod, setCreateMethod] = useState<CreateMethod>('manual');
 
+  // Auth hook to get logged in user
+  const { user } = useAuth();
+
   // Manual Task Creation
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [participants, setParticipants] = useState('');
+  const [requirements, setRequirements] = useState('');
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -109,7 +117,7 @@ export default function CreateTaskScreen() {
     }
   };
 
-  // Manual Task Creation - Direct to Events Table
+  // Manual Task Creation - Direct to Manual Tasks API (No Authentication Required)
   const handleCreateManualTask = async () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter a task title');
@@ -118,48 +126,92 @@ export default function CreateTaskScreen() {
 
     try {
       // Map frontend priority values to backend expected values
-      const priorityMapping: { [key: string]: 'low' | 'medium' | 'high' | 'urgent' } = {
+      const priorityLabelMapping: { [key: string]: 'low' | 'medium' | 'high' | 'urgent' } = {
         'Thấp': 'low',
         'Trung bình': 'medium', 
         'Cao': 'high',
         'Khẩn cấp': 'urgent'
       };
 
-      // Create event data
-      const eventData: CreateEventRequest = {
-        title: title.trim(),
-        description: description?.trim() || undefined,
-        start_date: date.toISOString().split('T')[0], // YYYY-MM-DD format
-        start_time: time.toTimeString().slice(0, 8), // HH:MM:SS format
-        end_time: undefined, // Can be calculated or set by user
-        location: undefined, // Can be added to form later
-        priority: priorityMapping[priority] || 'medium',
-        category: category || undefined,
-        keywords: category ? [category] : undefined,
-        is_recurring: false, // Default to non-recurring
-        reminder_settings: reminder !== 'Không có' ? {
-          enabled: true,
-          minutes_before: reminderToMinutes(reminder),
-          notification_type: 'push'
-        } : undefined,
+      // Map priority to numeric values (1-5)
+      const priorityNumericMapping: { [key: string]: number } = {
+        'Thấp': 2,
+        'Trung bình': 3, 
+        'Cao': 4,
+        'Khẩn cấp': 5
       };
 
-      const response = await EventsAPI.create(eventData);
+      // Create datetime strings for start_datetime and end_datetime
+      const startDateTime = new Date(date);
+      startDateTime.setHours(time.getHours(), time.getMinutes(), time.getSeconds());
+      
+      // Default end time to 1 hour after start time if not specified
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setHours(startDateTime.getHours() + 1);
+
+      // Format datetime as YYYY-MM-DD HH:MM:SS
+      const formatDateTime = (dt: Date) => {
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        const seconds = String(dt.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      };
+
+      // Parse participants and requirements from comma-separated strings
+      const participantsList = participants.trim() 
+        ? participants.split(',').map(p => p.trim()).filter(p => p.length > 0)
+        : [];
+      
+      const requirementsList = requirements.trim() 
+        ? requirements.split(',').map(r => r.trim()).filter(r => r.length > 0)
+        : [];
+
+      // Create manual task data following the exact API structure from cURL examples
+      const taskData: CreateManualTaskRequest = {
+        title: title.trim(),
+        description: description?.trim() || undefined,
+        start_datetime: formatDateTime(startDateTime), // Using start_datetime
+        end_datetime: formatDateTime(endDateTime),     // Using end_datetime
+        location: location.trim() || undefined,
+        status: 'scheduled',  // Changed from 'pending' to 'scheduled' as per cURL example
+        user_id: user?.id || 1, // Use logged-in user's ID or fallback to 1
+        priority: priorityNumericMapping[priority] || 3,
+        task_type: category?.toLowerCase().replace(/\s+/g, '_') || 'general',
+        task_priority_label: priorityLabelMapping[priority] || 'medium',
+        participants: participantsList,
+        requirements: requirementsList,
+        event_metadata: {
+          category: category,
+          reminder: reminder,
+          reminder_minutes: reminder !== 'Không có' ? reminderToMinutes(reminder) : null,
+          created_from: 'mobile_app'
+        }
+      };
+
+      console.log('📤 Sending manual task data:', JSON.stringify(taskData, null, 2));
+      
+      const response = await ManualTasksAPI.create(taskData);
 
       if (response.success) {
         Alert.alert(
-          'Task Created Successfully',
-          `Your task "${title}" has been created directly in your schedule.`,
+          'Tạo nhiệm vụ thành công',
+          `Nhiệm vụ "${title}" đã được tạo thành công.`,
           [
             {
-              text: 'View Schedule',
-              onPress: () => router.push('/schedule'),
+              text: 'Xem lịch trình',
+              onPress: () => router.back(),
             },
             {
-              text: 'Create Another',
+              text: 'Tạo nhiệm vụ khác',
               onPress: () => {
                 setTitle('');
                 setDescription('');
+                setLocation('');
+                setParticipants('');
+                setRequirements('');
                 setDate(new Date());
                 setTime(new Date());
                 setCategory('Xây dựng');
@@ -171,8 +223,23 @@ export default function CreateTaskScreen() {
         );
       }
     } catch (error: any) {
-      console.error('Error creating task:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to create task');
+      console.error('Error creating manual task:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Show detailed error message
+      let errorMessage = 'Failed to create manual task';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        // Handle validation errors
+        const errors = error.response.data.errors;
+        const errorDetails = Object.entries(errors).map(([field, msgs]) => 
+          `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`
+        ).join('\n');
+        errorMessage = `Validation errors:\n${errorDetails}`;
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -355,7 +422,7 @@ export default function CreateTaskScreen() {
             Nhiệm vụ thủ công
           </Text>
           <Text style={[styles.methodDescription, createMethod === 'manual' && styles.selectedText]}>
-            Có thể tạo task bằng cách nhập thủ công bằng tayÏ
+            Tạo nhiệm vụ thủ công với API Manual Tasks (không yêu cầu xác thực)
           </Text>
         </TouchableOpacity>
 
@@ -396,6 +463,31 @@ export default function CreateTaskScreen() {
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Địa điểm (tùy chọn)"
+          value={location}
+          onChangeText={setLocation}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Người tham gia (phân cách bằng dấu phẩy)"
+          value={participants}
+          onChangeText={setParticipants}
+          multiline
+          numberOfLines={2}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Yêu cầu cần thiết (phân cách bằng dấu phẩy)"
+          value={requirements}
+          onChangeText={setRequirements}
+          multiline
+          numberOfLines={2}
         />
 
         <View style={styles.dateTimeRow}>
