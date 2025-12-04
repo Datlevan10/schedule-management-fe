@@ -52,9 +52,10 @@ export interface ManualTaskFilters {
 }
 
 export interface ManualTaskResponse {
-  success: boolean;
+  success?: boolean;
+  status?: 'success' | 'error';
   message?: string;
-  data: ManualTask;
+  data?: ManualTask;
 }
 
 export interface ManualTaskListResponse {
@@ -72,8 +73,19 @@ export const ManualTasksAPI = {
   // Create a new manual task
   create: async (data: CreateManualTaskRequest): Promise<ManualTaskResponse> => {
     try {
-      const response = await api.post<ManualTaskResponse>('/manual-tasks', data);
-      return response.data;
+      const response = await api.post<any>('/manual-tasks', data);
+      console.log('🔍 Raw API response:', response);
+      
+      // Handle different response formats from backend
+      const normalizedResponse: ManualTaskResponse = {
+        success: response.data?.success || response.data?.status === 'success',
+        status: response.data?.status || (response.data?.success ? 'success' : 'error'),
+        message: response.data?.message,
+        data: response.data?.data || response.data?.task // Handle different data field names
+      };
+      
+      console.log('📋 Normalized response:', normalizedResponse);
+      return normalizedResponse;
     } catch (error) {
       console.error('Error creating manual task:', error);
       throw error;
