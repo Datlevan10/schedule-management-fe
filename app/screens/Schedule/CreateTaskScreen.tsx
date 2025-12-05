@@ -439,7 +439,7 @@ export default function CreateTaskScreen() {
             Nhiệm vụ thủ công
           </Text>
           <Text style={[styles.methodDescription, createMethod === 'manual' && styles.selectedText]}>
-            Tạo nhiệm vụ thủ công với API Manual Tasks (không yêu cầu xác thực)
+            Tạo task thủ công bằng cách nhập liệu bằng tay
           </Text>
         </TouchableOpacity>
 
@@ -529,80 +529,40 @@ export default function CreateTaskScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Category, Priority, Reminder Selectors */}
-          <View style={styles.pickerRow}>
-            <Text style={styles.pickerLabel}>Ngành:</Text>
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.picker}
-                onPress={() => {
-                  setShowCategoryDropdown(!showCategoryDropdown);
-                  setShowPriorityDropdown(false);
-                }}
-              >
-                <Text style={styles.pickerText}>{category}</Text>
-                <Text style={styles.dropdownArrow}>{showCategoryDropdown ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {showCategoryDropdown && (
-                <View style={styles.dropdownList}>
-                  {categories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[
-                        styles.dropdownItem,
-                        cat === category && styles.selectedDropdownItem
-                      ]}
-                      onPress={() => {
-                        setCategory(cat);
-                        setShowCategoryDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownItemText,
-                        cat === category && styles.selectedDropdownItemText
-                      ]}>{cat}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
+          {/* Category Input Field */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Chuyên ngành:</Text>
+            <TextInput
+              style={styles.textInput}
+              value={category}
+              onChangeText={setCategory}
+              placeholder="Nhập ngành của bạn (ví dụ: Công nghệ, Y tế, Giáo dục...)"
+              placeholderTextColor={Colors.text.placeholder}
+            />
           </View>
 
-          <View style={styles.pickerRow}>
-            <Text style={styles.pickerLabel}>Sự ưu tiên:</Text>
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.picker}
-                onPress={() => {
-                  setShowPriorityDropdown(!showPriorityDropdown);
-                  setShowCategoryDropdown(false);
-                }}
-              >
-                <Text style={styles.pickerText}>{priority}</Text>
-                <Text style={styles.dropdownArrow}>{showPriorityDropdown ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {showPriorityDropdown && (
-                <View style={styles.dropdownList}>
-                  {priorities.map((prio) => (
-                    <TouchableOpacity
-                      key={prio}
-                      style={[
-                        styles.dropdownItem,
-                        prio === priority && styles.selectedDropdownItem
-                      ]}
-                      onPress={() => {
-                        setPriority(prio);
-                        setShowPriorityDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownItemText,
-                        prio === priority && styles.selectedDropdownItemText
-                      ]}>{prio}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+          {/* Priority Radio Buttons */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Sự ưu tiên:</Text>
+            <View style={styles.radioGroup}>
+              {priorities.map((prio) => (
+                <TouchableOpacity
+                  key={prio}
+                  style={styles.radioOption}
+                  onPress={() => setPriority(prio)}
+                >
+                  <View style={[
+                    styles.radioButton,
+                    priority === prio && styles.radioButtonSelected
+                  ]}>
+                    {priority === prio && <View style={styles.radioButtonInner} />}
+                  </View>
+                  <Text style={[
+                    styles.radioLabel,
+                    priority === prio && styles.radioLabelSelected
+                  ]}>{prio}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </Card>
@@ -916,6 +876,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    overflow: 'visible',
   },
   header: {
     flexDirection: 'row',
@@ -1021,7 +982,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    zIndex: 1000,
+    zIndex: 10000,
     overflow: 'visible',
   },
   pickerLabel: {
@@ -1047,7 +1008,8 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     flex: 1,
     position: 'relative',
-    zIndex: 1001,
+    zIndex: 10001,
+    overflow: 'visible',
   },
   dropdownArrow: {
     ...Typography.body1,
@@ -1066,12 +1028,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     maxHeight: 200,
-    zIndex: 9999,
-    elevation: 10,
+    zIndex: 99999,
+    elevation: 50,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    overflow: 'visible',
   },
   dropdownItem: {
     padding: 12,
@@ -1092,6 +1055,7 @@ const styles = StyleSheet.create({
   createButton: {
     margin: 20,
     marginTop: 0,
+    zIndex: 1,
   },
   importGrid: {
     flexDirection: 'row',
@@ -1200,7 +1164,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Typography.body1,
     color: Colors.text.primary,
-    minHeight: 120,
+    minHeight: 50,
     textAlignVertical: 'top',
   },
   importButton: {
@@ -1282,5 +1246,59 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     marginTop: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    ...Typography.body1,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 8,
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    backgroundColor: Colors.background.primary,
+    minWidth: '45%',
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  radioButtonSelected: {
+    borderColor: Colors.primary,
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
+  radioLabel: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    flex: 1,
+  },
+  radioLabelSelected: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });

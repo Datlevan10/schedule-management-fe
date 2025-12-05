@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import React from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -14,54 +13,54 @@ export default function PrivacySecurityScreen() {
   const securityOptions = [
     {
       icon: '🔐',
-      title: 'Change Password',
-      description: 'Update your account password',
+      title: 'Thay đổi mật khẩu',
+      description: 'Cập nhật mật khẩu tài khoản của bạn',
       onPress: () => router.push('/profile/change-password'),
     },
     {
       icon: '🔑',
-      title: 'Two-Factor Authentication',
-      description: 'Add an extra layer of security',
-      onPress: () => {},
+      title: 'Xác thực hai yếu tố',
+      description: 'Thêm một lớp bảo mật',
+      onPress: () => { },
     },
     {
       icon: '📱',
-      title: 'Manage Devices',
-      description: 'View and manage logged-in devices',
-      onPress: () => {},
+      title: 'Quản lý thiết bị',
+      description: 'Xem và quản lý các thiết bị đã đăng nhập',
+      onPress: () => { },
     },
     {
       icon: '📧',
-      title: 'Email Verification',
-      description: 'Verify your email address',
-      onPress: () => {},
+      title: 'Xác minh Email',
+      description: 'Xác minh địa chỉ email của bạn',
+      onPress: () => { },
     },
     {
       icon: '🚫',
-      title: 'Privacy Settings',
-      description: 'Control who can see your information',
-      onPress: () => {},
+      title: 'Cài đặt quyền riêng tư',
+      description: 'Kiểm soát những ai có thể xem thông tin của bạn',
+      onPress: () => { },
     },
     {
       icon: '📊',
-      title: 'Data Export',
-      description: 'Download your personal data',
-      onPress: () => {},
+      title: 'Xuất dữ liệu',
+      description: 'Tải xuống dữ liệu cá nhân của bạn',
+      onPress: () => { },
     },
     {
       icon: '🗑️',
-      title: 'Delete Account',
-      description: 'Permanently delete your account',
-      onPress: () => {},
+      title: 'Xóa tài khoản',
+      description: 'Xóa vĩnh viễn tài khoản của bạn',
+      onPress: () => { },
     },
   ];
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Privacy & Security</Text>
+        <Text style={styles.title}>Quyền riêng tư và Bảo mật</Text>
         <Text style={styles.subtitle}>
-          Manage your account security and privacy settings
+          Quản lý cài đặt bảo mật và quyền riêng tư của tài khoản
         </Text>
       </View>
 

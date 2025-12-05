@@ -73,11 +73,34 @@ export default function AdminLoginScreen() {
         // Store admin role for app state
         await AsyncStorage.setItem('userRole', 'admin');
 
-        Alert.alert(
-          'Đăng nhập thành công',
-          `Chào mừng ${result.data.admin.name}!`,
-          [{ text: 'OK', onPress: () => router.replace('/admin/dashboard') }]
-        );
+        // For web, navigate directly without alert for better UX
+        if (Platform.OS === 'web') {
+          console.log('🌐 Web platform detected, navigating directly to dashboard...');
+          console.log('🔄 Current URL:', window.location.href);
+          
+          // Add a small delay to ensure storage is set
+          setTimeout(() => {
+            console.log('📍 Navigating to /admin/dashboard...');
+            try {
+              // Try using push for debugging
+              router.push('/admin/dashboard');
+              console.log('✅ Navigation command sent');
+            } catch (navError) {
+              console.error('❌ Navigation error:', navError);
+              // Fallback: try direct window navigation for web
+              if (typeof window !== 'undefined') {
+                console.log('🔄 Fallback: Using window.location');
+                window.location.href = '/admin/dashboard';
+              }
+            }
+          }, 100);
+        } else {
+          Alert.alert(
+            'Đăng nhập thành công',
+            `Chào mừng ${result.data.admin.name}!`,
+            [{ text: 'OK', onPress: () => router.replace('/admin/dashboard') }]
+          );
+        }
       } else {
         setError('Đăng nhập không thành công');
       }

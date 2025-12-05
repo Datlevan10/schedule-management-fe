@@ -4,9 +4,11 @@ import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navi
 import { router } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { AdminAPI, AdminUser } from '../api/admin.api';
 import { Colors, Typography } from '../constants';
+
+const { width } = Dimensions.get('window');
 
 function CustomDrawerContent(props: any) {
   const [adminProfile, setAdminProfile] = useState<AdminUser | null>(null);
@@ -83,6 +85,9 @@ function CustomDrawerContent(props: any) {
 }
 
 export default function AdminLayout() {
+  const isWeb = Platform.OS === 'web';
+  const drawerWidth = isWeb && width > 768 ? 320 : 280;
+
   return (
     <Drawer
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -91,15 +96,34 @@ export default function AdminLayout() {
         drawerInactiveTintColor: Colors.text.secondary,
         drawerStyle: {
           backgroundColor: Colors.background.primary,
-          width: 280,
+          width: drawerWidth,
+          ...(isWeb && {
+            borderRightWidth: 1,
+            borderRightColor: Colors.border.light,
+          }),
         },
         headerStyle: {
           backgroundColor: Colors.primary,
+          ...(isWeb && {
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+          }),
         },
         headerTintColor: Colors.white,
         headerTitleStyle: {
           ...Typography.h3,
+          ...(isWeb && {
+            fontSize: 18,
+            fontWeight: '600',
+          }),
         },
+        ...(isWeb && {
+          drawerPosition: 'left',
+          drawerType: width > 768 ? 'permanent' : 'back',
+        }),
       }}
     >
       <Drawer.Screen
