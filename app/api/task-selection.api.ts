@@ -11,8 +11,11 @@ export interface SelectableTask {
   location?: string;
   status: 'scheduled' | 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'postponed';
   priority: number;
+  completion_percentage: number;
+  category?: string | null;
   duration_minutes: number;
   is_selectable: boolean;
+  created_at: string;
   metadata: {
     manually_created?: boolean;
     task_type?: string;
@@ -34,10 +37,20 @@ export interface TaskListResponse {
       manual_tasks: number;
       imported_tasks: number;
       selectable_tasks: number;
+      date_range: {
+        earliest: string;
+        latest: string;
+      };
+      filters_available: {
+        by_source: string[];
+        by_priority: number[];
+        by_status: string[];
+      };
     };
     selection_info: {
       instruction: string;
       min_selection: number;
+      max_selection: number | null;
       recommended_selection: string;
     };
   };
@@ -123,15 +136,55 @@ export const TaskSelectionAPI = {
   // AI analysis for selected tasks
   analyzeSelectedTasks: async (userId: number, analysisRequest: AIAnalysisRequest): Promise<AIAnalysisResponse> => {
     try {
-      console.log('🤖 Starting AI analysis for selected tasks:', { userId, analysisRequest });
-      const response = await api.post<AIAnalysisResponse>(
-        `/ai-schedule/analyze-selected/${userId}`,
-        analysisRequest
-      );
-      console.log('✅ AI analysis completed:', response.data);
+      const endpoint = `/ai-schedule/analyze-selected/${userId}`;
+      
+      console.log('🌐 ================= API SERVICE LOGGING =================');
+      console.log('📍 Endpoint:', endpoint);
+      console.log('🔧 Method:', 'POST');
+      console.log('👤 User ID:', userId);
+      console.log('📤 Request Body:', JSON.stringify(analysisRequest, null, 2));
+      console.log('⏰ Timestamp:', new Date().toISOString());
+      console.log('=======================================================');
+
+      // Increase timeout for AI analysis (3 minutes)
+      const response = await api.post<AIAnalysisResponse>(endpoint, analysisRequest, {
+        timeout: 180000 // 3 minutes (180,000 ms)
+      });
+      
+      console.log('📥 ================= API RESPONSE LOGGING ===============');
+      console.log('✅ Response Status Code:', response.status);
+      console.log('📝 Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('⏰ Response Time:', new Date().toISOString());
+      console.log('======================================================');
+      
       return response.data;
-    } catch (error) {
-      console.error('❌ Error in AI analysis:', error);
+    } catch (error: any) {
+      console.log('❌ ================= API ERROR LOGGING =================');
+      console.error('❌ Request Failed - Endpoint:', `/ai-schedule/analyze-selected/${userId}`);
+      console.error('❌ Error Type:', error.constructor?.name || 'Unknown');
+      console.error('❌ Error Message:', error.message);
+      console.error('❌ Error Code:', error.code);
+      console.error('❌ Error Stack:', error.stack);
+      
+      if (error.response) {
+        console.error('📥 Error Response Status:', error.response.status);
+        console.error('📥 Error Response Data:', JSON.stringify(error.response.data, null, 2));
+        console.error('📥 Error Response Headers:', JSON.stringify(error.response.headers, null, 2));
+      }
+      
+      if (error.request) {
+        console.error('📤 Error Request Config:', JSON.stringify({
+          method: error.request.method || error.config?.method,
+          url: error.request.url || error.config?.url,
+          baseURL: error.config?.baseURL,
+          timeout: error.config?.timeout,
+          headers: error.config?.headers
+        }, null, 2));
+      }
+      
+      console.error('⏰ Error Timestamp:', new Date().toISOString());
+      console.log('====================================================');
+      
       throw error;
     }
   }

@@ -138,6 +138,7 @@ export default function ProfileScreen() {
     { icon: '🔔', title: 'Cài đặt thông báo', action: () => router.push('/profile/notification-settings') },
     { icon: '🔒', title: 'Quyền riêng tư & Bảo mật', action: () => router.push('/profile/privacy-security') },
     { icon: '📊', title: 'Báo cáo hoạt động', action: () => router.push('/profile/activity-reports') },
+    { icon: '🤖', title: 'Phân tích AI nhiệm vụ', action: () => router.push('/profile/ai-task-selection') },
     { icon: '💾', title: 'Sao lưu & Đồng bộ', action: () => router.push('/profile/backup-sync') },
     { icon: '❓', title: 'Hỗ trợ & Trợ giúp', action: () => router.push('/profile/help-support') },
     { icon: '📜', title: 'Điều khoản dịch vụ', action: () => router.push('/profile/terms-of-service') },

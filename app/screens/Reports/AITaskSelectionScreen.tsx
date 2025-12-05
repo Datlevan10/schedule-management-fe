@@ -15,11 +15,30 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
 import { Colors, Typography } from '../../constants';
-import { TaskSelectionAPI, type SelectableTask, type TaskListFilters, type AIAnalysisRequest } from '../../api/task-selection.api';
 import { useAuth } from '../../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
+
+// Custom AI Icon Component
+const AIIcon = ({ color = "#8051FF", size = 20 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M6.97051 6.077L7.57276 7.7495C8.24176 9.60575 9.70351 11.0675 11.5598 11.7365L13.2323 12.3388C13.383 12.3935 13.383 12.6073 13.2323 12.6613L11.5598 13.2635C9.70351 13.9325 8.24176 15.3943 7.57276 17.2505L6.97051 18.923C6.91576 19.0738 6.70201 19.0738 6.64801 18.923L6.04576 17.2505C5.37676 15.3943 3.91501 13.9325 2.05876 13.2635L0.386256 12.6613C0.235506 12.6065 0.235506 12.3928 0.386256 12.3388L2.05876 11.7365C3.91501 11.0675 5.37676 9.60575 6.04576 7.7495L6.64801 6.077C6.70201 5.9255 6.91576 5.9255 6.97051 6.077Z"
+      fill={color}
+    />
+    <Path
+      d="M14.4991 2.05794L14.8043 2.90469C15.1433 3.84444 15.8836 4.58469 16.8233 4.92369L17.6701 5.22894C17.7466 5.25669 17.7466 5.36469 17.6701 5.39244L16.8233 5.69769C15.8836 6.03669 15.1433 6.77694 14.8043 7.71669L14.4991 8.56344C14.4713 8.63994 14.3633 8.63994 14.3356 8.56344L14.0303 7.71669C13.6913 6.77694 12.9511 6.03669 12.0113 5.69769L11.1646 5.39244C11.0881 5.36469 11.0881 5.25669 11.1646 5.22894L12.0113 4.92369C12.9511 4.58469 13.6913 3.84444 14.0303 2.90469L14.3356 2.05794C14.3633 1.98069 14.4721 1.98069 14.4991 2.05794Z"
+      fill={color}
+    />
+    <Path
+      d="M14.4991 16.4377L14.8043 17.2845C15.1433 18.2242 15.8836 18.9645 16.8233 19.3035L17.6701 19.6087C17.7466 19.6365 17.7466 19.7445 17.6701 19.7722L16.8233 20.0775C15.8836 20.4165 15.1433 21.1567 14.8043 22.0965L14.4991 22.9432C14.4713 23.0197 14.3633 23.0197 14.3356 22.9432L14.0303 22.0965C13.6913 21.1567 12.9511 20.4165 12.0113 20.0775L11.1646 19.7722C11.0881 19.7445 11.0881 19.6365 11.1646 19.6087L12.0113 19.3035C12.9511 18.9645 13.6913 18.2242 14.0303 17.2845L14.3356 16.4377C14.3633 16.3612 14.4721 16.3612 14.4991 16.4377Z"
+      fill={color}
+    />
+  </Svg>
+);
 
 interface SelectableTaskCardProps {
   task: SelectableTask;
@@ -30,9 +49,9 @@ interface SelectableTaskCardProps {
 const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTaskCardProps) => {
   const formatDateTime = (datetime: string) => {
     const date = new Date(datetime);
-    return `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
     })}`;
   };
 
@@ -51,12 +70,12 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
   };
 
   return (
-    <Pressable 
+    <Pressable
       style={[
-        styles.taskCard, 
+        styles.taskCard,
         isSelected && styles.selectedTaskCard,
         !task.is_selectable && styles.disabledTaskCard
-      ]} 
+      ]}
       onPress={() => task.is_selectable && onToggleSelect(task.task_id)}
       disabled={!task.is_selectable}
     >
@@ -73,7 +92,7 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
               )}
             </View>
           </View>
-          
+
           <View style={styles.taskTitleContainer}>
             <Text style={[
               styles.taskTitle,
@@ -83,16 +102,16 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
             </Text>
             <View style={styles.taskMeta}>
               <View style={styles.sourceTag}>
-                <Ionicons 
-                  name={getSourceIcon(task.source)} 
-                  size={12} 
-                  color={Colors.text.secondary} 
+                <Ionicons
+                  name={getSourceIcon(task.source)}
+                  size={12}
+                  color={Colors.text.secondary}
                 />
                 <Text style={styles.sourceText}>
                   {getSourceLabel(task.source)}
                 </Text>
               </View>
-              
+
               <View style={[styles.priorityTag, { backgroundColor: getPriorityColor(task.priority) + '20' }]}>
                 <Text style={[styles.priorityText, { color: getPriorityColor(task.priority) }]}>
                   Ưu tiên {task.priority}
@@ -119,7 +138,7 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
             {formatDateTime(task.start_datetime)}
           </Text>
         </View>
-        
+
         <View style={styles.taskDetailRow}>
           <Ionicons name="time-outline" size={14} color={Colors.text.secondary} />
           <Text style={styles.taskDetailText}>
@@ -177,7 +196,7 @@ export default function AITaskSelectionScreen() {
 
   const loadTasks = useCallback(async () => {
     if (!user?.id) return;
-    
+
     try {
       setError(null);
       console.log('🔍 Loading user task list for AI selection...');
@@ -188,7 +207,7 @@ export default function AITaskSelectionScreen() {
       };
 
       const response = await TaskSelectionAPI.getUserTaskList(user.id, filters);
-      
+
       if (response.status === 'success' && response.data) {
         setTasks(response.data.tasks);
         setFilteredTasks(response.data.tasks);
@@ -240,24 +259,102 @@ export default function AITaskSelectionScreen() {
 
     setAiLoading(true);
     try {
+      const selectedTaskIds = Array.from(selectedTasks);
+      const selectedTaskDetails = tasks.filter(task => selectedTaskIds.includes(task.task_id));
+      
       const analysisRequest: AIAnalysisRequest = {
-        selected_tasks: Array.from(selectedTasks),
+        selected_tasks: selectedTaskIds,
         analysis_type: 'optimization',
-        focus_areas: ['conflict_detection', 'time_optimization', 'workload_balance']
+        focus_areas: ['conflict_detection', 'time_optimization', 'workload_balance'],
+        additional_context: `Analyzing ${selectedTaskDetails.length} tasks for user ${user?.name || user?.id}`
       };
 
-      const response = await TaskSelectionAPI.analyzeSelectedTasks(user!.id, analysisRequest);
+      // 🔍 DETAILED LOGGING FOR BACKEND DEBUGGING
+      console.log('🤖 =================== AI ANALYSIS REQUEST ===================');
+      console.log('👤 User ID:', user!.id);
+      console.log('👤 User Name:', user?.name);
+      console.log('📊 Selected Task Count:', selectedTaskIds.length);
+      console.log('📝 Selected Task IDs:', JSON.stringify(selectedTaskIds, null, 2));
       
+      console.log('\n📋 SELECTED TASK DETAILS:');
+      selectedTaskDetails.forEach((task, index) => {
+        console.log(`\n--- Task ${index + 1} ---`);
+        console.log('ID:', task.task_id);
+        console.log('Source:', task.source);
+        console.log('Title:', task.title);
+        console.log('Description:', task.description);
+        console.log('Start:', task.start_datetime);
+        console.log('End:', task.end_datetime);
+        console.log('Location:', task.location);
+        console.log('Priority:', task.priority);
+        console.log('Duration:', task.duration_minutes, 'minutes');
+        console.log('Status:', task.status);
+        console.log('Category:', task.category);
+        console.log('Metadata:', JSON.stringify(task.metadata, null, 2));
+      });
+      
+      console.log('\n🔧 ANALYSIS REQUEST PAYLOAD:');
+      console.log(JSON.stringify(analysisRequest, null, 2));
+      
+      console.log('\n🌐 API ENDPOINT:');
+      console.log(`POST /ai-schedule/analyze-selected/${user!.id}`);
+      
+      console.log('\n📤 SENDING REQUEST TO BACKEND...');
+      console.log('⏰ This may take up to 3 minutes for AI processing...');
+      console.log('===========================================================\n');
+
+      const response = await TaskSelectionAPI.analyzeSelectedTasks(user!.id, analysisRequest);
+
+      console.log('📥 =================== AI ANALYSIS RESPONSE ===================');
+      console.log('✅ Response Status:', response.status);
+      console.log('📝 Response Message:', response.message);
+      console.log('🔍 Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('==============================================================\n');
+
       if (response.status === 'success') {
         setAiResult(response.data);
         setShowAIModal(true);
-        console.log('✅ AI analysis completed:', response.data);
+        console.log('✅ AI analysis completed successfully!');
       } else {
         throw new Error(response.message || 'AI analysis failed');
       }
-    } catch (error) {
-      console.error('❌ Error in AI analysis:', error);
-      Alert.alert('Lỗi', 'Không thể thực hiện phân tích AI. Vui lòng thử lại.');
+    } catch (error: any) {
+      console.log('❌ =================== AI ANALYSIS ERROR ===================');
+      console.error('❌ Error Type:', error.constructor.name);
+      console.error('❌ Error Message:', error.message);
+      console.error('❌ Error Code:', error.code);
+      console.error('❌ Request Config:', error.config ? {
+        method: error.config.method,
+        url: error.config.url,
+        baseURL: error.config.baseURL,
+        timeout: error.config.timeout,
+        headers: error.config.headers
+      } : 'No config available');
+      console.error('❌ Response Data:', error.response?.data);
+      console.error('❌ Response Status:', error.response?.status);
+      console.error('❌ Response Headers:', error.response?.headers);
+      console.error('❌ Full Error Object:', error);
+      console.log('=============================================================\n');
+      
+      // Better error messages based on error type
+      let errorTitle = 'Lỗi phân tích AI';
+      let errorMessage = 'Không thể thực hiện phân tích AI.';
+
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorTitle = 'Timeout - AI đang xử lý';
+        errorMessage = `AI đang xử lý dữ liệu và mất nhiều thời gian hơn dự kiến.\n\n• Hãy thử lại sau 1-2 phút\n• AI cần thời gian để phân tích dữ liệu phức tạp\n• Kiểm tra kết nối mạng`;
+      } else if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+        errorTitle = 'Lỗi kết nối';
+        errorMessage = `Không thể kết nối đến server.\n\n• Kiểm tra kết nối internet\n• Server có thể đang bảo trì\n• Thử lại sau vài phút`;
+      } else if (error.response?.status === 500) {
+        errorTitle = 'Lỗi server';
+        errorMessage = `Server gặp sự cố khi xử lý AI.\n\n• Server có thể quá tải\n• OpenAI API có thể gặp vấn đề\n• Thử lại sau vài phút`;
+      } else if (error.response?.status === 404) {
+        errorTitle = 'API không tìm thấy';
+        errorMessage = `Endpoint AI không tồn tại.\n\n• Backend chưa deploy API\n• URL endpoint sai\n• Liên hệ developer`;
+      }
+
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setAiLoading(false);
     }
@@ -368,7 +465,7 @@ export default function AITaskSelectionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chọn nhiệm vụ cho AI</Text>
+        <Text style={styles.headerTitle}> <AIIcon /> Chọn nhiệm vụ cho AI</Text>
         <Text style={styles.headerSubtitle}>
           Chọn các nhiệm vụ để AI phân tích và tối ưu hóa lịch trình
         </Text>
@@ -410,7 +507,7 @@ export default function AITaskSelectionScreen() {
               {selectedTasks.size === filteredTasks.filter(t => t.is_selectable).length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
             </Text>
           </TouchableOpacity>
-          
+
           {sourceOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
@@ -469,10 +566,10 @@ export default function AITaskSelectionScreen() {
             {aiLoading ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Ionicons name="brain" size={20} color="white" />
+              <AIIcon color="white" size={20} />
             )}
             <Text style={styles.aiButtonText}>
-              {aiLoading ? 'Đang phân tích...' : `Phân tích AI (${selectedTasks.size})`}
+              {aiLoading ? 'Đang phân tích AI... (có thể mất 1-3 phút)' : `Phân tích AI (${selectedTasks.size})`}
             </Text>
           </TouchableOpacity>
         </View>
