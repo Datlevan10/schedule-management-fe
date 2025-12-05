@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Linking,
   ScrollView,
@@ -27,7 +26,7 @@ export default function AboutScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>About</Text>
+        <Text style={styles.title}>Về</Text>
       </View>
 
       <Card style={styles.card}>
@@ -40,12 +39,12 @@ export default function AboutScreen() {
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Developer</Text>
+        <Text style={styles.sectionTitle}>Nhà phát triển</Text>
         <Text style={styles.infoText}>{appInfo.developer}</Text>
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>Contact</Text>
+        <Text style={styles.sectionTitle}>Liên hệ</Text>
         
         <TouchableOpacity
           style={styles.linkRow}
@@ -59,7 +58,7 @@ export default function AboutScreen() {
           style={styles.linkRow}
           onPress={() => handleOpenLink(`mailto:${appInfo.support}`)}
         >
-          <Text style={styles.linkLabel}>Support:</Text>
+          <Text style={styles.linkLabel}>Hỗ trợ:</Text>
           <Text style={styles.linkText}>{appInfo.support}</Text>
         </TouchableOpacity>
       </Card>
@@ -68,15 +67,15 @@ export default function AboutScreen() {
         <Text style={styles.sectionTitle}>Legal</Text>
         
         <TouchableOpacity style={styles.legalLink}>
-          <Text style={styles.legalText}>Terms of Service</Text>
+          <Text style={styles.legalText}>Điều khoản dịch vụ</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.legalLink}>
-          <Text style={styles.legalText}>Privacy Policy</Text>
+          <Text style={styles.legalText}>Chính sách bảo mật</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.legalLink}>
-          <Text style={styles.legalText}>Open Source Licenses</Text>
+          <Text style={styles.legalText}>Giấy phép</Text>
         </TouchableOpacity>
       </Card>
 
