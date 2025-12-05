@@ -59,7 +59,7 @@ export default function CreateTaskScreen() {
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [category, setCategory] = useState('Xây dựng');
+  const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('Thấp');
   const [reminder, setReminder] = useState('15 phút trước');
 
@@ -211,8 +211,8 @@ export default function CreateTaskScreen() {
           `Nhiệm vụ "${title}" đã được tạo thành công.\n\n${successMessage}`,
           [
             {
-              text: 'Xem lịch trình',
-              onPress: () => router.back(),
+              text: 'Xem danh sách task của bạn.',
+              onPress: () => router.push('/profile/ai-task-selection'),
             },
             {
               text: 'Tạo nhiệm vụ khác',
@@ -224,7 +224,7 @@ export default function CreateTaskScreen() {
                 setRequirements('');
                 setDate(new Date());
                 setTime(new Date());
-                setCategory('Xây dựng');
+                setCategory('');
                 setPriority('Thấp');
                 setReminder('15 phút trước');
               },
