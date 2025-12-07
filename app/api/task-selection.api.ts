@@ -117,6 +117,119 @@ export interface TaskListFilters {
   priority_max?: number;
 }
 
+export interface AnalysisHistoryItem {
+  analysis_id: number;
+  user_id: string;
+  analysis_type: 'optimization' | 'comprehensive' | 'weekly_optimization';
+  focus_areas: string[];
+  selected_tasks: Array<{
+    task_id: string;
+    source: string;
+    title: string;
+    description: string;
+    start_datetime: string;
+    end_datetime: string;
+    location: string;
+    status: string;
+    priority: number;
+    completion_percentage: number;
+    category: string | null;
+    duration_minutes: number;
+  }>;
+  task_summary: {
+    selected_tasks_count: number;
+    manual_tasks_count: number;
+    imported_tasks_count: number;
+    priority_distribution: Record<string, number>;
+    total_duration_minutes: number;
+    date_range: {
+      start: string;
+      end: string;
+    };
+  };
+  ai_analysis: {
+    raw_response: string;
+    structured_response: {
+      task_assessment: {
+        task_combination: string;
+        total_duration: string;
+        priority_analysis: {
+          high_priority: {
+            task_id: string;
+            priority: number;
+          };
+          low_priority: {
+            task_id: string;
+            priority: number;
+          };
+        };
+      };
+      conflicts_identified: {
+        scheduling_conflict: string;
+        location_conflict: string;
+      };
+      optimization_suggestions: {
+        task_1: {
+          task_id: string;
+          suggestions: string[];
+        };
+        task_2: {
+          task_id: string;
+          suggestions: string[];
+        };
+      };
+      priority_recommendations: {
+        high_priority_task: {
+          task_id: string;
+          time_allocation: string;
+        };
+        low_priority_task: {
+          task_id: string;
+          time_allocation: string;
+        };
+      };
+      actionable_improvements: string[];
+      recommended_schedule_sequence: Array<{
+        task_id: string;
+        start_datetime: string;
+        end_datetime: string;
+        priority: string;
+      }>;
+    };
+    model_used: string;
+    usage: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
+    confidence: string;
+    processing_time_ms: number;
+    api_cost: number;
+  };
+  recommendations: any;
+  analyzed_at: string;
+  selection_metadata: {
+    total_selected: number;
+    manual_selected: number;
+    imported_selected: number;
+  };
+  saved_to_database: boolean;
+}
+
+export interface AnalysisHistoryResponse {
+  status: 'success' | 'error';
+  message: string;
+  data: {
+    analyses: AnalysisHistoryItem[];
+    pagination: {
+      current_page: number;
+      per_page: number;
+      total: number;
+      total_pages: number;
+    };
+  };
+}
+
 export const TaskSelectionAPI = {
   // Get all user tasks for selection
   getUserTaskList: async (userId: number, filters?: TaskListFilters): Promise<TaskListResponse> => {
@@ -185,6 +298,34 @@ export const TaskSelectionAPI = {
       console.error('⏰ Error Timestamp:', new Date().toISOString());
       console.log('====================================================');
       
+      throw error;
+    }
+  },
+
+  // Get AI analysis history for user
+  getAnalysisHistory: async (userId: number, page: number = 1, perPage: number = 10): Promise<AnalysisHistoryResponse> => {
+    try {
+      console.log('🔍 Fetching AI analysis history:', { userId, page, perPage });
+      const response = await api.get<AnalysisHistoryResponse>(`/ai-analyses/user/${userId}`, {
+        params: { page, per_page: perPage }
+      });
+      console.log('✅ Analysis history retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching analysis history:', error);
+      throw error;
+    }
+  },
+
+  // Get specific AI analysis by ID
+  getAnalysisById: async (userId: number, analysisId: string): Promise<{ status: string; data: AnalysisHistoryItem }> => {
+    try {
+      console.log('🔍 Fetching specific analysis:', { userId, analysisId });
+      const response = await api.get<{ status: string; data: AnalysisHistoryItem }>(`/ai-analyses/user/${userId}/analysis/${analysisId}`);
+      console.log('✅ Specific analysis retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching specific analysis:', error);
       throw error;
     }
   }

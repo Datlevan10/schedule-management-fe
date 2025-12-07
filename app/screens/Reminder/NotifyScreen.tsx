@@ -1,81 +1,115 @@
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import { NotificationAPI } from '../../api/notifications.api';
 import { Card } from '../../components/common';
-import { Colors, Typography } from '../../constants';
+import { Colors, StorageKeys, Typography } from '../../constants';
+import { notificationService } from '../../services/NotificationService';
 
 interface Notification {
   id: string;
   title: string;
   description: string;
   time: string;
-  type: 'reminder' | 'nhiệm vụ' | 'sự kiện' | 'cảnh báo';
+  type: 'ai_analysis' | 'priority_task' | 'reminder' | 'nhiệm vụ' | 'sự kiện' | 'cảnh báo';
   isRead: boolean;
-  priority: 'thấp' | 'trung bình' | 'cao';
+  priority: 'thấp' | 'trung bình' | 'cao' | 'rất cao';
+  analysis_id?: number;
+  task_id?: string;
+  created_at?: string;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Họp nhóm',
-    description: 'Họp đứng hàng ngày trong 15 phút',
-    time: '15 phút',
-    type: 'reminder',
-    isRead: false,
-    priority: 'cao'
-  },
-  {
-    id: '2',
-    title: 'Nhiệm vụ đến hạn',
-    description: 'Hoàn thành slide thuyết trình dự án',
-    time: '1 giờ',
-    type: 'nhiệm vụ',
-    isRead: false,
-    priority: 'cao'
-  },
-  {
-    id: '3',
-    title: 'Nghỉ trưa',
-    description: 'Giờ nghỉ giải lao và ăn trưa',
-    time: '2 giờ',
-    type: 'reminder',
-    isRead: true,
-    priority: 'thấp'
-  },
-  {
-    id: '4',
-    title: 'Hẹn gặp bác sĩ',
-    description: 'Khám sức khỏe định kỳ lúc 3:00 chiều',
-    time: '3 giờ',
-    type: 'sự kiện',
-    isRead: false,
-    priority: 'trung bình'
-  },
-  {
-    id: '5',
-    title: 'Hạn chót dự án',
-    description: 'Nộp báo cáo cuối cùng trước cuối ngày',
-    time: '5 giờ',
-    type: 'cảnh báo',
-    isRead: true,
-    priority: 'cao'
-  }
-]
 
 
 export default function NotifyScreen() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      console.log('🔔 ===== NOTIFY SCREEN: LOADING NOTIFICATIONS =====');
+      setLoading(true);
+
+      // Debug: Check what keys are stored in AsyncStorage
+      const allKeys = await AsyncStorage.getAllKeys();
+      console.log('🔍 All AsyncStorage keys:', allKeys);
+
+      // Try both possible user data keys
+      const userDataStr = await AsyncStorage.getItem(StorageKeys.AUTH.USER_DATA);
+      const oldUserDataStr = await AsyncStorage.getItem('userData');
+
+      console.log('🔍 USER_DATA (@user_data):', userDataStr ? 'found' : 'not found');
+      console.log('🔍 userData (old key):', oldUserDataStr ? 'found' : 'not found');
+
+      const finalUserData = userDataStr || oldUserDataStr;
+
+      if (!finalUserData) {
+        console.log('❌ No user data found in either key, showing empty notifications');
+        setNotifications([]);
+        return;
+      }
+
+      const userData = JSON.parse(finalUserData);
+      const userId = userData.id;
+      console.log('👤 User ID found:', userId);
+
+      // Load Enhanced AI notifications with Task Priority from backend
+      console.log('📱 Calling getEnhancedAINotifications...');
+      const aiNotifications = await NotificationAPI.getEnhancedAINotifications(userId);
+
+      // Generate task reminders for upcoming high-priority tasks
+      console.log('⏰ Generating task reminders...');
+      await notificationService.generateTaskReminders(userId);
+
+      // Use only backend notifications
+      console.log('✅ Setting notifications:', aiNotifications.length);
+      setNotifications(aiNotifications);
+    } catch (error) {
+      console.error('❌ Error loading notifications:', error);
+      setNotifications([]); // Show empty array on error instead of mock data
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      console.log('🔔 ===== NOTIFY SCREEN: LOADING COMPLETE =====');
+    }
+  }, []);
+
+  // Load notifications on component mount
+  useEffect(() => {
+    console.log('🔔 NotifyScreen useEffect triggered - loading notifications...');
+    loadNotifications();
+  }, [loadNotifications]);
+
+  // Load notifications when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔔 NotifyScreen focused - reloading notifications...');
+      loadNotifications();
+    }, [loadNotifications])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadNotifications();
+  };
 
   const getTypeIcon = (type: Notification['type']) => {
     switch (type) {
+      case 'ai_analysis': return '🤖';
+      case 'priority_task': return '⭐';
       case 'reminder': return '🔔';
       case 'nhiệm vụ': return '📝';
       case 'sự kiện': return '📅';
@@ -86,19 +120,62 @@ export default function NotifyScreen() {
 
   const getPriorityColor = (priority: Notification['priority']) => {
     switch (priority) {
-      case 'cao': return '#EF4444';
-      case 'trung bình': return '#F59E0B';
-      case 'thấp': return '#10B981';
+      case 'rất cao': return '#DC2626'; // Critical - Dark red
+      case 'cao': return '#EF4444'; // High - Red
+      case 'trung bình': return '#F59E0B'; // Medium - Orange
+      case 'thấp': return '#10B981'; // Low - Green
       default: return Colors.text.secondary;
     }
   };
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // Mark as read in local state
     setNotifications(prev =>
       prev.map(notif =>
         notif.id === id ? { ...notif, isRead: true } : notif
       )
     );
+
+    // Mark as read via API
+    try {
+      await NotificationAPI.markAsRead(id);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleNotificationPress = (notification: Notification) => {
+    markAsRead(notification.id);
+
+    // Handle navigation based on notification type
+    if (notification.type === 'ai_analysis' && notification.analysis_id) {
+      // Navigate to AI analysis history
+      router.push('/profile/ai-analysis-history');
+    } else if (notification.type === 'priority_task') {
+      if (notification.analysis_id && notification.task_id) {
+        // Navigate to AI task selection with focus on the specific task and analysis
+        router.push({
+          pathname: '/screens/Reports/AITaskSelectionScreen',
+          params: {
+            analysisId: notification.analysis_id.toString(),
+            taskId: notification.task_id,
+            priority: 'high'
+          }
+        });
+      } else if (notification.analysis_id) {
+        // Navigate to AI task selection with focus on the specific analysis
+        router.push({
+          pathname: '/screens/Reports/AITaskSelectionScreen',
+          params: { analysisId: notification.analysis_id.toString() }
+        });
+      } else {
+        // Default navigation to task selection screen
+        router.push('/screens/Reports/AITaskSelectionScreen');
+      }
+    } else if (notification.type === 'cảnh báo' && notification.analysis_id) {
+      // Navigate to AI analysis history for warnings/conflicts
+      router.push('/profile/ai-analysis-history');
+    }
   };
 
   const filteredNotifications = filter === 'unread'
@@ -107,8 +184,22 @@ export default function NotifyScreen() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Đang tải thông báo...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Thông báo</Text>
@@ -159,7 +250,7 @@ export default function NotifyScreen() {
           filteredNotifications.map((notification) => (
             <TouchableOpacity
               key={notification.id}
-              onPress={() => markAsRead(notification.id)}
+              onPress={() => handleNotificationPress(notification)}
             >
               <Card>
                 <View style={styles.notificationHeader}>
@@ -275,6 +366,7 @@ const styles = StyleSheet.create({
   notificationsList: {
     paddingHorizontal: 20,
     marginBottom: 20,
+    gap: 16
   },
   notificationCard: {
     padding: 16,
@@ -383,5 +475,14 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.border.light,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...Typography.body1,
+    color: Colors.text.secondary,
+    marginTop: 10,
   },
 });

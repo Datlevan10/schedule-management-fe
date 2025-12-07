@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +15,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Vibration
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
@@ -201,18 +204,31 @@ export default function AITaskSelectionScreen() {
       setError(null);
       console.log('🔍 Loading user task list for AI selection...');
 
+      // Remove restrictive date filtering to show all user tasks
       const filters: TaskListFilters = {
-        upcoming_only: true,
-        date_from: new Date().toISOString().split('T')[0]
+        // Load all tasks regardless of date for AI analysis
       };
 
       const response = await TaskSelectionAPI.getUserTaskList(user.id, filters);
 
       if (response.status === 'success' && response.data) {
+        console.log('📋 Raw API Response - Total tasks:', response.data.tasks.length);
+        console.log('📋 Task details:');
+        response.data.tasks.forEach((task, index) => {
+          console.log(`  ${index + 1}. ${task.task_id}: ${task.title}`);
+          console.log(`     Date: ${task.start_datetime}`);
+          console.log(`     Selectable: ${task.is_selectable}`);
+        });
+        
         setTasks(response.data.tasks);
         setFilteredTasks(response.data.tasks);
         setSummary(response.data.summary);
-        console.log('✅ Task list loaded successfully:', response.data.summary);
+        
+        console.log('✅ Task list loaded successfully:', {
+          totalTasks: response.data.tasks.length,
+          summary: response.data.summary
+        });
+        console.log('📱 State updated - Tasks in memory:', response.data.tasks.length);
       } else {
         throw new Error(response.message || 'Failed to load tasks');
       }
@@ -315,6 +331,46 @@ export default function AITaskSelectionScreen() {
         setAiResult(response.data);
         setShowAIModal(true);
         console.log('✅ AI analysis completed successfully!');
+        
+        // Vibrate device for success feedback
+        Vibration.vibrate([100, 50, 100]);
+        
+        // Show success notification with task priority info
+        const analysisData = response.data;
+        const highPriorityTask = analysisData.ai_analysis?.structured_response?.priority_recommendations?.high_priority_task;
+        const taskDetails = analysisData.selected_tasks?.find((t: any) => t.task_id === highPriorityTask?.task_id);
+        
+        let notificationMessage = `🎯 AI phân tích hoàn thành cho ${selectedTasks.size} nhiệm vụ!`;
+        if (taskDetails) {
+          notificationMessage += `\n⭐ Ưu tiên cao: ${taskDetails.title}`;
+        }
+        
+        Alert.alert(
+          '🤖 Phân tích AI hoàn thành!',
+          notificationMessage,
+          [
+            {
+              text: 'Xem chi tiết',
+              style: 'default',
+              onPress: () => {
+                // Modal is already shown above
+              }
+            },
+            {
+              text: 'Xem thông báo', 
+              style: 'default',
+              onPress: () => {
+                router.push('/screens/Reminder/NotifyScreen');
+              }
+            }
+          ]
+        );
+        
+        // Trigger notification refresh by storing a flag
+        await AsyncStorage.setItem('newNotificationAvailable', 'true');
+        
+        // Store analysis completion timestamp for notifications
+        await AsyncStorage.setItem('lastAIAnalysisCompleted', new Date().toISOString());
       } else {
         throw new Error(response.message || 'AI analysis failed');
       }
@@ -396,55 +452,119 @@ export default function AITaskSelectionScreen() {
   const renderAIResultModal = () => {
     if (!aiResult) return null;
 
+    const analysis = aiResult.ai_analysis?.structured_response?.analysis;
+    if (!analysis) return null;
+
     return (
       <Modal visible={showAIModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Kết quả phân tích AI</Text>
+            <Text style={styles.modalTitle}>Kết quả phân tích AI 🤖</Text>
             <TouchableOpacity onPress={() => setShowAIModal(false)}>
               <Ionicons name="close" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.modalContent}>
+            {/* Task Summary */}
             <View style={styles.resultSection}>
-              <Text style={styles.sectionTitle}>Đánh giá tổng quan</Text>
+              <Text style={styles.sectionTitle}>📊 Tổng quan</Text>
               <Text style={styles.sectionText}>
-                {aiResult.ai_analysis.structured_response.assessment}
+                • Số lượng nhiệm vụ: {analysis.assessment.task_count}
+              </Text>
+              <Text style={styles.sectionText}>
+                • Tổng thời gian: {analysis.assessment.total_duration} phút
+              </Text>
+              <Text style={styles.sectionText}>
+                • Ưu tiên cao: {analysis.assessment.priority_distribution.high || 0} | 
+                  Trung bình: {analysis.assessment.priority_distribution.medium || 0}
               </Text>
             </View>
 
-            {aiResult.ai_analysis.structured_response.conflicts.length > 0 && (
-              <View style={styles.resultSection}>
-                <Text style={styles.sectionTitle}>Xung đột phát hiện</Text>
-                {aiResult.ai_analysis.structured_response.conflicts.map((conflict: any, index: number) => (
+            {/* Conflicts */}
+            <View style={styles.resultSection}>
+              <Text style={styles.sectionTitle}>⚠️ Xung đột lịch trình</Text>
+              {analysis.conflicts.issues && analysis.conflicts.issues.length > 0 ? (
+                analysis.conflicts.issues.map((conflict: any, index: number) => (
                   <View key={index} style={styles.conflictItem}>
-                    <Text style={styles.conflictType}>{conflict.type}</Text>
-                    <Text style={styles.conflictTasks}>Nhiệm vụ: {conflict.tasks.join(', ')}</Text>
-                    <Text style={styles.conflictSuggestion}>Gợi ý: {conflict.suggestion}</Text>
+                    <Text style={styles.conflictType}>{conflict}</Text>
                   </View>
-                ))}
-              </View>
-            )}
-
-            <View style={styles.resultSection}>
-              <Text style={styles.sectionTitle}>Tối ưu hóa</Text>
-              {aiResult.ai_analysis.structured_response.optimizations.map((opt: string, index: number) => (
-                <Text key={index} style={styles.optimizationItem}>• {opt}</Text>
-              ))}
+                ))
+              ) : (
+                <Text style={styles.sectionText}>
+                  ✅ {analysis.conflicts.conflict_detection || 'Không có xung đột'}
+                </Text>
+              )}
             </View>
 
+            {/* Time Management Suggestions */}
             <View style={styles.resultSection}>
-              <Text style={styles.sectionTitle}>Điểm năng suất</Text>
-              <Text style={styles.productivityScore}>
-                {aiResult.ai_analysis.structured_response.productivity_score}/100
+              <Text style={styles.sectionTitle}>⏰ Gợi ý quản lý thời gian</Text>
+              {analysis.optimization_suggestions.time_management.map((item: any, index: number) => {
+                const task = aiResult.selected_tasks.find((t: any) => t.task_id === item.task_id);
+                return (
+                  <View key={index} style={styles.suggestionItem}>
+                    <Text style={styles.taskName}>
+                      📌 {task?.title || item.task_id}
+                    </Text>
+                    <Text style={styles.suggestionText}>
+                      → {item.suggestion}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Workload Balance */}
+            <View style={styles.resultSection}>
+              <Text style={styles.sectionTitle}>⚖️ Cân bằng khối lượng công việc</Text>
+              <Text style={styles.sectionText}>
+                {analysis.optimization_suggestions.workload_balance}
               </Text>
             </View>
 
+            {/* Priority Recommendations */}
             <View style={styles.resultSection}>
-              <Text style={styles.sectionTitle}>Tiết kiệm thời gian</Text>
-              <Text style={styles.timeSavings}>
-                {aiResult.ai_analysis.structured_response.time_savings}
+              <Text style={styles.sectionTitle}>🎯 Khuyến nghị ưu tiên</Text>
+              <Text style={styles.sectionText}>
+                • Ưu tiên cao: {aiResult.selected_tasks.find((t: any) => 
+                  t.task_id === analysis.priority_recommendations.high_priority_task)?.title}
+              </Text>
+              <Text style={styles.sectionText}>
+                • Ưu tiên trung bình: {aiResult.selected_tasks.find((t: any) => 
+                  t.task_id === analysis.priority_recommendations.medium_priority_task)?.title}
+              </Text>
+            </View>
+
+            {/* Actionable Improvements */}
+            <View style={styles.resultSection}>
+              <Text style={styles.sectionTitle}>💡 Cải tiến thực tế</Text>
+              {analysis.actionable_improvements.map((item: any, index: number) => {
+                const task = aiResult.selected_tasks.find((t: any) => t.task_id === item.task_id);
+                return (
+                  <View key={index} style={styles.improvementItem}>
+                    <Text style={styles.taskName}>
+                      📌 {task?.title || item.task_id}
+                    </Text>
+                    <Text style={styles.improvementText}>
+                      ✨ {item.improvement}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* AI Model Info */}
+            <View style={styles.resultSection}>
+              <Text style={styles.sectionTitle}>🤖 Thông tin AI</Text>
+              <Text style={styles.sectionText}>
+                • Model: {aiResult.ai_analysis.model_used}
+              </Text>
+              <Text style={styles.sectionText}>
+                • Độ tin cậy: {aiResult.ai_analysis.confidence}
+              </Text>
+              <Text style={styles.sectionText}>
+                • Tokens sử dụng: {aiResult.ai_analysis.usage?.total_tokens || 'N/A'}
               </Text>
             </View>
           </ScrollView>
@@ -465,10 +585,21 @@ export default function AITaskSelectionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}> <AIIcon /> Chọn nhiệm vụ cho AI</Text>
-        <Text style={styles.headerSubtitle}>
-          Chọn các nhiệm vụ để AI phân tích và tối ưu hóa lịch trình
-        </Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}> <AIIcon /> Chọn nhiệm vụ cho AI</Text>
+            <Text style={styles.headerSubtitle}>
+              Chọn các nhiệm vụ để AI phân tích và tối ưu hóa lịch trình
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => router.push('/profile/ai-analysis-history')}
+          >
+            <Ionicons name="time-outline" size={20} color={Colors.primary} />
+            <Text style={styles.historyButtonText}>Lịch sử</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.summaryContainer}>
@@ -591,6 +722,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginRight: 15,
+  },
   headerTitle: {
     ...Typography.h2,
     color: Colors.text.primary,
@@ -599,6 +739,21 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     ...Typography.body1,
     color: Colors.text.secondary,
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.tertiary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  historyButtonText: {
+    ...Typography.body2,
+    color: Colors.primary,
+    marginLeft: 4,
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -916,5 +1071,35 @@ const styles = StyleSheet.create({
     color: Colors.success || '#27ae60',
     textAlign: 'center',
     fontWeight: '600',
+  },
+  suggestionItem: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: Colors.background.secondary || '#f5f5f5',
+    borderRadius: 8,
+  },
+  taskName: {
+    ...Typography.body2,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  suggestionText: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  improvementItem: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  improvementText: {
+    ...Typography.body2,
+    color: Colors.text.primary,
+    lineHeight: 20,
   },
 });
