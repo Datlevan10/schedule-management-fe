@@ -117,56 +117,11 @@ export const NotificationAPI = {
             created_at: analysis.analyzed_at,
           });
 
-          // Priority task notifications
-          if (
-            analysis.ai_analysis.structured_response.priority_recommendations
-          ) {
-            const highPriorityTask =
-              analysis.ai_analysis.structured_response.priority_recommendations
-                .high_priority_task;
-            if (highPriorityTask) {
-              // Find the task details
-              const taskDetails = analysis.selected_tasks.find(
-                (t) => t.task_id === highPriorityTask.task_id
-              );
-              if (taskDetails) {
-                notifications.push({
-                  id: `priority_${analysis.analysis_id}_${highPriorityTask.task_id}`,
-                  title: "⭐ Nhiệm vụ ưu tiên cao",
-                  description: `"${taskDetails.title}" cần được ưu tiên thực hiện`,
-                  time: formatTimeAgo(analysis.analyzed_at),
-                  type: "priority_task",
-                  isRead: false,
-                  priority: "cao",
-                  analysis_id: analysis.analysis_id,
-                  task_id: highPriorityTask.task_id,
-                  created_at: analysis.analyzed_at,
-                });
-              }
-            }
-          }
-
-          // Conflict warnings
-          if (analysis.ai_analysis.structured_response.conflicts_identified) {
-            const conflicts =
-              analysis.ai_analysis.structured_response.conflicts_identified;
-            if (
-              conflicts.scheduling_conflict &&
-              conflicts.scheduling_conflict.includes("conflict")
-            ) {
-              notifications.push({
-                id: `conflict_${analysis.analysis_id}`,
-                title: "⚠️ Cảnh báo xung đột lịch",
-                description: conflicts.scheduling_conflict,
-                time: formatTimeAgo(analysis.analyzed_at),
-                type: "cảnh báo",
-                isRead: false,
-                priority: "cao",
-                analysis_id: analysis.analysis_id,
-                created_at: analysis.analyzed_at,
-              });
-            }
-          }
+          // Skip priority task notifications and conflict warnings 
+          // since structured_response is not present in the API response
+          // We'll rely on the Task Priority API for this data instead
+          
+          console.log('📋 Skipping structured_response processing (not present in API response)');
         }
       );
 
