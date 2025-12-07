@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform, Text } from 'react-native';
+import NotificationBadge from '../components/NotificationBadge';
 
 export default function TabLayout() {
   return (
@@ -45,7 +46,7 @@ export default function TabLayout() {
         options={{
           title: 'Thông báo',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="notifications" size={size} color={color} />
+            <NotificationBadge color={color} size={size} />
           ),
         }}
       />

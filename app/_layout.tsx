@@ -1,8 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
+import { notificationService } from './services/NotificationService';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -10,6 +12,16 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  // Initialize notification service
+  useEffect(() => {
+    console.log('🔔 Notification service initialized');
+    // The notification service is automatically initialized as a singleton
+    return () => {
+      // Cleanup on unmount
+      notificationService.destroy();
+    };
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

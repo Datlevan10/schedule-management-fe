@@ -1,0 +1,487 @@
+import api from "./index";
+import { AnalysisHistoryItem, TaskSelectionAPI } from "./task-selection.api";
+
+export interface AINotification {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  type:
+    | "ai_analysis"
+    | "priority_task"
+    | "reminder"
+    | "nhiệm vụ"
+    | "sự kiện"
+    | "cảnh báo";
+  isRead: boolean;
+  priority: "thấp" | "trung bình" | "cao" | "rất cao";
+  analysis_id?: number;
+  task_id?: string;
+  created_at: string;
+}
+
+export interface NotificationResponse {
+  status: "success" | "error";
+  message: string;
+  data: {
+    notifications: AINotification[];
+    unread_count: number;
+  };
+}
+
+export interface TaskPriorityTask {
+  task_id: string;
+  title: string;
+  priority: number;
+  urgency_level: "critical" | "high" | "medium" | "low";
+  start_datetime: string;
+  location: string;
+  notification_message?: string;
+  priority_description?: string;
+}
+
+export interface TaskPriorityResponse {
+  status: "success" | "error";
+  message: string;
+  data: {
+    analysis_id: number;
+    analysis_date: string;
+    highest_priority_task: TaskPriorityTask;
+    priority_ranking: (TaskPriorityTask & { rank: number })[];
+    task_summary: {
+      total_tasks: number;
+      priority_distribution: Record<string, number>;
+      urgency_breakdown: Record<string, number>;
+      date_range: {
+        earliest: string;
+        latest: string;
+      };
+    };
+    notifications_for_frontend: {
+      type: "task_priority";
+      priority: "critical" | "high" | "medium" | "low";
+      title: string;
+      message: string;
+      action_data: {
+        task_id: string;
+        analysis_id: number;
+        priority_rank: number;
+        action_type: "view_task_details";
+      };
+      scheduled_datetime: string;
+      location: string;
+      context: {
+        duration_minutes?: number;
+        urgency_level: string;
+        ai_confidence: number;
+      };
+    }[];
+    ai_recommendations: any[];
+    ai_confidence_score: number;
+    priority_guidelines: Record<string, string>;
+  };
+}
+
+export const NotificationAPI = {
+  // Get AI analysis notifications for user
+  getAINotifications: async (userId: number): Promise<AINotification[]> => {
+    try {
+      console.log("🔍 Fetching AI analysis notifications for user:", userId);
+
+      // Get recent AI analyses
+      const analysisResponse = await TaskSelectionAPI.getAnalysisHistory(
+        userId,
+        1,
+        5
+      );
+
+      if (analysisResponse.status !== "success") {
+        return [];
+      }
+
+      const notifications: AINotification[] = [];
+
+      // Convert AI analyses to notifications
+      analysisResponse.data.analyses.forEach(
+        (analysis: AnalysisHistoryItem, index: number) => {
+          // Main analysis completion notification
+          notifications.push({
+            id: `ai_analysis_${analysis.analysis_id}`,
+            title: "🤖 Phân tích AI hoàn thành",
+            description: `Phân tích cho ${analysis.task_summary?.selected_tasks_count || analysis.selected_tasks?.length || 'một số'} nhiệm vụ đã sẵn sàng`,
+            time: formatTimeAgo(analysis.analyzed_at),
+            type: "ai_analysis",
+            isRead: false,
+            priority: "cao",
+            analysis_id: analysis.analysis_id,
+            created_at: analysis.analyzed_at,
+          });
+
+          // Priority task notifications
+          if (
+            analysis.ai_analysis.structured_response.priority_recommendations
+          ) {
+            const highPriorityTask =
+              analysis.ai_analysis.structured_response.priority_recommendations
+                .high_priority_task;
+            if (highPriorityTask) {
+              // Find the task details
+              const taskDetails = analysis.selected_tasks.find(
+                (t) => t.task_id === highPriorityTask.task_id
+              );
+              if (taskDetails) {
+                notifications.push({
+                  id: `priority_${analysis.analysis_id}_${highPriorityTask.task_id}`,
+                  title: "⭐ Nhiệm vụ ưu tiên cao",
+                  description: `"${taskDetails.title}" cần được ưu tiên thực hiện`,
+                  time: formatTimeAgo(analysis.analyzed_at),
+                  type: "priority_task",
+                  isRead: false,
+                  priority: "cao",
+                  analysis_id: analysis.analysis_id,
+                  task_id: highPriorityTask.task_id,
+                  created_at: analysis.analyzed_at,
+                });
+              }
+            }
+          }
+
+          // Conflict warnings
+          if (analysis.ai_analysis.structured_response.conflicts_identified) {
+            const conflicts =
+              analysis.ai_analysis.structured_response.conflicts_identified;
+            if (
+              conflicts.scheduling_conflict &&
+              conflicts.scheduling_conflict.includes("conflict")
+            ) {
+              notifications.push({
+                id: `conflict_${analysis.analysis_id}`,
+                title: "⚠️ Cảnh báo xung đột lịch",
+                description: conflicts.scheduling_conflict,
+                time: formatTimeAgo(analysis.analyzed_at),
+                type: "cảnh báo",
+                isRead: false,
+                priority: "cao",
+                analysis_id: analysis.analysis_id,
+                created_at: analysis.analyzed_at,
+              });
+            }
+          }
+        }
+      );
+
+      // Sort notifications by creation time (newest first)
+      notifications.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.log("✅ Generated AI notifications:", notifications.length);
+      return notifications;
+    } catch (error) {
+      console.error("❌ Error fetching AI notifications:", error);
+      return [];
+    }
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string): Promise<boolean> => {
+    try {
+      console.log("✅ Marking notification as read:", notificationId);
+      // For now, we'll handle this locally
+      // In a real app, you'd send this to the backend
+      return true;
+    } catch (error) {
+      console.error("❌ Error marking notification as read:", error);
+      return false;
+    }
+  },
+
+  // Get unread notification count
+  getUnreadCount: async (userId: number): Promise<number> => {
+    try {
+      const notifications = await NotificationAPI.getAINotifications(userId);
+      return notifications.filter((n) => !n.isRead).length;
+    } catch (error) {
+      console.error("❌ Error getting unread count:", error);
+      return 0;
+    }
+  },
+
+  // Get Task Priority Recommendations from specific analysis
+  getTaskPriorityRecommendations: async (
+    analysisId: number
+  ): Promise<TaskPriorityResponse | null> => {
+    try {
+      console.log(
+        `🎯 Fetching task priority recommendations for analysis ID: ${analysisId}`
+      );
+
+      const response = await api.get(
+        `/ai-analyses/${analysisId}/priority-recommendations`
+      );
+
+      if (response.data.status === "success") {
+        console.log("✅ Task priority recommendations fetched successfully");
+        return response.data;
+      } else {
+        console.error(
+          "❌ Failed to fetch task priority recommendations:",
+          response.data.message
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error fetching task priority recommendations:", error);
+      return null;
+    }
+  },
+
+  // Get Latest Task Priority Recommendations for user
+  getLatestTaskPriorityRecommendations: async (
+    userId: number
+  ): Promise<TaskPriorityResponse | null> => {
+    try {
+      console.log(`🎯 ===== CALLING TASK PRIORITY API =====`);
+      console.log(`🎯 User ID: ${userId}`);
+      console.log(
+        `🎯 Full URL: http://192.168.1.8:8000/api/v1/ai-analyses/user/${userId}/latest-priorities`
+      );
+      console.log(`🎯 Endpoint: /ai-analyses/user/${userId}/latest-priorities`);
+
+      const response = await api.get(
+        `/ai-analyses/user/${userId}/latest-priorities`
+      );
+
+      console.log(`🎯 ===== API RESPONSE =====`);
+      console.log(`🎯 Status:`, response.status);
+      console.log(`🎯 Response Data:`, JSON.stringify(response.data, null, 2));
+
+      if (response.data.status === "success") {
+        console.log(
+          "✅ Latest task priority recommendations fetched successfully"
+        );
+        console.log(
+          "✅ Number of tasks in priority_ranking:",
+          response.data.data?.priority_ranking?.length || 0
+        );
+        console.log(
+          "✅ Number of notifications_for_frontend:",
+          response.data.data?.notifications_for_frontend?.length || 0
+        );
+        return response.data;
+      } else {
+        console.error(
+          "❌ Failed to fetch latest task priority recommendations:",
+          response.data.message
+        );
+        return null;
+      }
+    } catch (error: any) {
+      console.error(`❌ ===== TASK PRIORITY API ERROR =====`);
+      console.error("❌ Error Type:", error.constructor.name);
+      console.error("❌ Error Message:", error.message);
+      console.error("❌ Error Code:", error.code);
+      console.error("❌ Response Status:", error.response?.status);
+      console.error("❌ Response Data:", error.response?.data);
+      console.error("❌ Request URL:", error.config?.url);
+      console.error("❌ Full Error:", error);
+      return null;
+    }
+  },
+
+  // Convert Task Priority Response to Notifications
+  convertTaskPriorityToNotifications: (
+    priorityResponse: TaskPriorityResponse
+  ): AINotification[] => {
+    const notifications: AINotification[] = [];
+
+    if (!priorityResponse.data.notifications_for_frontend) {
+      return notifications;
+    }
+
+    priorityResponse.data.notifications_for_frontend.forEach((notif, index) => {
+      const urgencyToPriority = (
+        urgency: string
+      ): "thấp" | "trung bình" | "cao" | "rất cao" => {
+        switch (urgency) {
+          case "critical":
+            return "rất cao";
+          case "high":
+            return "cao";
+          case "medium":
+            return "trung bình";
+          case "low":
+            return "thấp";
+          default:
+            return "trung bình";
+        }
+      };
+
+      const getTypeIcon = (urgency: string): string => {
+        switch (urgency) {
+          case "critical":
+            return "🔥";
+          case "high":
+            return "⭐";
+          case "medium":
+            return "📝";
+          case "low":
+            return "📌";
+          default:
+            return "📝";
+        }
+      };
+
+      const getVietnameseTitle = (englishTitle: string, urgencyLevel: string): string => {
+        const priorityNumber = notif.action_data.priority_rank;
+        const taskTitle = englishTitle.replace(/^Task Priority #\d+:\s*/, '');
+        
+        const urgencyText = urgencyLevel === 'critical' ? 'Khẩn cấp' :
+                           urgencyLevel === 'high' ? 'Ưu tiên cao' :
+                           urgencyLevel === 'medium' ? 'Ưu tiên trung bình' :
+                           'Ưu tiên thấp';
+        
+        return `${urgencyText} #${priorityNumber}: ${taskTitle}`;
+      };
+
+      const getVietnameseDescription = (englishMessage: string, urgencyLevel: string): string => {
+        const priorityDescriptions: Record<string, string> = {
+          'critical': 'Khẩn cấp - Cần xử lý ngay lập tức',
+          'high': 'Ưu tiên cao - Nên hoàn thành hôm nay',
+          'medium': 'Ưu tiên trung bình - Hoàn thành trong tuần',
+          'low': 'Ưu tiên thấp - Có thể lên lịch lại'
+        };
+
+        const priority = englishMessage.match(/Priority (\d+)/)?.[1] || '';
+        const description = priorityDescriptions[urgencyLevel] || englishMessage;
+        
+        return priority ? `Mức độ ${priority} - ${description}` : description;
+      };
+
+      notifications.push({
+        id: `priority_${notif.action_data.analysis_id}_${notif.action_data.task_id}`,
+        title: `${getTypeIcon(notif.context.urgency_level)} ${getVietnameseTitle(notif.title, notif.context.urgency_level)}`,
+        description: getVietnameseDescription(notif.message, notif.context.urgency_level),
+        time: formatTimeAgo(notif.scheduled_datetime),
+        type: "priority_task",
+        isRead: false,
+        priority: urgencyToPriority(notif.context.urgency_level),
+        analysis_id: notif.action_data.analysis_id,
+        task_id: notif.action_data.task_id,
+        created_at: notif.scheduled_datetime,
+      });
+    });
+
+    return notifications;
+  },
+
+  // Enhanced AI notifications with Task Priority integration
+  getEnhancedAINotifications: async (
+    userId: number
+  ): Promise<AINotification[]> => {
+    try {
+      console.log("🔍 ===== ENHANCED NOTIFICATIONS START =====");
+      console.log(
+        "🔍 Fetching enhanced AI notifications with task priority for user:",
+        userId
+      );
+
+      // Get existing AI notifications
+      console.log("📋 Step 1: Getting existing AI notifications...");
+      const aiNotifications = await NotificationAPI.getAINotifications(userId);
+      console.log(
+        "📋 Existing AI notifications count:",
+        aiNotifications.length
+      );
+
+      // Get latest task priority recommendations
+      console.log("📋 Step 2: Getting latest task priority recommendations...");
+      const latestPriorities =
+        await NotificationAPI.getLatestTaskPriorityRecommendations(userId);
+
+      let priorityNotifications: AINotification[] = [];
+      if (latestPriorities) {
+        console.log(
+          "📋 Step 3: Converting priority response to notifications..."
+        );
+        priorityNotifications =
+          NotificationAPI.convertTaskPriorityToNotifications(latestPriorities);
+        console.log(
+          "📋 Priority notifications generated:",
+          priorityNotifications.length
+        );
+
+        // Log each priority notification
+        priorityNotifications.forEach((notif, index) => {
+          console.log(`📋 Priority Notification ${index + 1}:`, {
+            id: notif.id,
+            title: notif.title,
+            description: notif.description,
+            type: notif.type,
+            priority: notif.priority,
+            task_id: notif.task_id,
+            analysis_id: notif.analysis_id,
+          });
+        });
+      } else {
+        console.log("📋 No priority data received from API");
+      }
+
+      // Combine all notifications
+      console.log("📋 Step 4: Combining notifications...");
+      const allNotifications = [...priorityNotifications, ...aiNotifications];
+      console.log("📋 Total before deduplication:", allNotifications.length);
+
+      // Sort by creation time (newest first) and remove duplicates
+      const uniqueNotifications = allNotifications.reduce(
+        (acc, notification) => {
+          const exists = acc.find((n) => n.id === notification.id);
+          if (!exists) {
+            acc.push(notification);
+          }
+          return acc;
+        },
+        [] as AINotification[]
+      );
+
+      uniqueNotifications.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.log("✅ ===== ENHANCED NOTIFICATIONS COMPLETE =====");
+      console.log("✅ Final notification count:", uniqueNotifications.length);
+      console.log("✅ Priority notifications:", priorityNotifications.length);
+      console.log("✅ AI notifications:", aiNotifications.length);
+
+      return uniqueNotifications;
+    } catch (error) {
+      console.error("❌ Error fetching enhanced AI notifications:", error);
+      return await NotificationAPI.getAINotifications(userId); // Fallback to regular notifications
+    }
+  },
+};
+
+// Helper function to format time ago
+function formatTimeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInMs = now.getTime() - date.getTime();
+
+  const minutes = Math.floor(diffInMs / (1000 * 60));
+  const hours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (minutes < 1) {
+    return "Vừa xong";
+  } else if (minutes < 60) {
+    return `${minutes} phút trước`;
+  } else if (hours < 24) {
+    return `${hours} giờ trước`;
+  } else {
+    return `${days} ngày trước`;
+  }
+}
+
+export default NotificationAPI;
