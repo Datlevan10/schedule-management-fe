@@ -29,26 +29,51 @@ function CustomDrawerContent(props: any) {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc muốn đăng xuất khỏi tài khoản Admin?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AdminAPI.logout();
-              await AsyncStorage.removeItem('userRole');
-              router.replace('/welcome');
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
+    // For web platform, handle logout directly without Alert
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Bạn có chắc muốn đăng xuất khỏi tài khoản Admin?');
+      if (confirmLogout) {
+        performLogout();
+      }
+    } else {
+      // For mobile platforms, use Alert
+      Alert.alert(
+        'Đăng xuất',
+        'Bạn có chắc muốn đăng xuất khỏi tài khoản Admin?',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Đăng xuất',
+            style: 'destructive',
+            onPress: performLogout,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
+  };
+
+  const performLogout = async () => {
+    try {
+      await AdminAPI.logout();
+      await AsyncStorage.removeItem('userRole');
+      
+      // Handle navigation based on platform
+      if (Platform.OS === 'web') {
+        // For web, use window.location for more reliable navigation
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/welcome';
+          } else {
+            router.replace('/welcome');
+          }
+        }, 100);
+      } else {
+        // For mobile platforms, use router
+        router.replace('/welcome');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
