@@ -4,12 +4,14 @@ import {
   Alert,
   FlatList,
   Linking,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
 import { Card } from '../../components/common';
 import { Colors } from '../../constants';
@@ -50,14 +52,17 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProfession, setSelectedProfession] = useState<string>('All');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
   }, []);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefresh) {
+        setIsLoading(true);
+      }
       setError(null);
       const response = await ScheduleTemplateAPI.getTemplates();
       setTemplates(response.data.data);
@@ -66,7 +71,13 @@ export default function HomeScreen() {
       setError('Unable to load templates. Please try again.');
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTemplates(true);
   };
 
   const professions = ['All', ...new Set(templates.map(t => t.profession?.display_name || 'Other'))];
@@ -114,6 +125,10 @@ export default function HomeScreen() {
     }
   };
 
+  const handleNotificationPress = () => {
+    router.push('/screens/Reminder/NotifyScreen');
+  };
+
   const renderTemplate = ({ item }: { item: ScheduleImportTemplate }) => {
     const professionName = item.profession?.name || 'default';
     const icon = professionIcons[professionName] || professionIcons.default;
@@ -153,13 +168,26 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          colors={[Colors.primary]}
+          tintColor={Colors.primary}
+        />
+      }
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Chào mừng trở lại,</Text>
           <Text style={styles.userName}>{user?.name || 'User'}! 👋</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={handleNotificationPress}
+        >
           <Text style={styles.notificationIcon}>🔔</Text>
         </TouchableOpacity>
       </View>

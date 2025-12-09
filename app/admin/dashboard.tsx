@@ -12,6 +12,7 @@ import {
   View
 } from 'react-native';
 import { AdminDashboardAPI, type DashboardStatistics } from '../api/admin-dashboard.api';
+import { AIAnalyticsAPI, type ChartData as AIChartData, type DashboardAnalytics } from '../api/ai-analytics.api';
 import { Colors, Typography } from '../constants';
 
 /**
@@ -68,6 +69,8 @@ export default function DashboardScreen() {
     activeSchedules: 0,
   });
   const [dashboardData, setDashboardData] = useState<DashboardStatistics | null>(null);
+  const [aiAnalyticsData, setAiAnalyticsData] = useState<DashboardAnalytics | null>(null);
+  const [chartData, setChartData] = useState<AIChartData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [userGrowthData] = useState<ChartData[]>([
@@ -79,8 +82,8 @@ export default function DashboardScreen() {
     { label: 'Jun', value: 520, color: Colors.primary },
   ]);
 
-  // Task analytics data based on real API data
-  const taskAnalyticsData: ChartData[] = [
+  // Task analytics data from AI Analytics API (replaces mock data)
+  const taskAnalyticsData: ChartData[] = chartData.length > 0 ? chartData : [
     { label: 'Hoàn thành', value: stats.completedTasks, color: Colors.success },
     { label: 'Đang tiến hành', value: dashboardData?.tasks.in_progress || 0, color: Colors.warning },
     { label: 'Đã lên lịch', value: dashboardData?.tasks.scheduled || 0, color: Colors.primary },
@@ -92,37 +95,65 @@ export default function DashboardScreen() {
   const loadDashboardData = useCallback(async () => {
     try {
       setError(null);
-      console.log('🔍 Loading dashboard data from API...');
+      console.log('🔍 Loading dashboard data from APIs...');
 
-      const response = await AdminDashboardAPI.getStatistics();
-      console.log('✅ Dashboard data loaded:', response.data);
+      // Load both admin dashboard and AI analytics data in parallel
+      const [adminResponse, chartsResponse, aiDashboardResponse] = await Promise.allSettled([
+        AdminDashboardAPI.getStatistics(),
+        AIAnalyticsAPI.getChartsData(),
+        AIAnalyticsAPI.getDashboardAnalytics()
+      ]);
 
-      if (response.status === 'success' && response.data) {
-        setDashboardData(response.data);
+      // Handle Admin Dashboard API response
+      if (adminResponse.status === 'fulfilled' && adminResponse.value.status === 'success') {
+        console.log('✅ Admin dashboard data loaded:', adminResponse.value.data);
+        setDashboardData(adminResponse.value.data);
 
         // Map API data to local stats format
         const mappedStats: DashboardStats = {
-          totalUsers: response.data.users.total,
-          activeUsers: response.data.users.active,
-          newUsersThisWeek: response.data.users.this_week,
-          totalTasks: response.data.tasks.total,
-          completedTasks: response.data.tasks.completed,
-          pendingTasks: response.data.tasks.scheduled + response.data.tasks.in_progress,
-          aiAnalyzedTasks: response.data.tasks.manual_tasks,
-          totalSchedules: response.data.tasks.total,
-          activeSchedules: response.data.tasks.in_progress + response.data.tasks.scheduled,
+          totalUsers: adminResponse.value.data.users.total,
+          activeUsers: adminResponse.value.data.users.active,
+          newUsersThisWeek: adminResponse.value.data.users.this_week,
+          totalTasks: adminResponse.value.data.tasks.total,
+          completedTasks: adminResponse.value.data.tasks.completed,
+          pendingTasks: adminResponse.value.data.tasks.scheduled + adminResponse.value.data.tasks.in_progress,
+          aiAnalyzedTasks: adminResponse.value.data.tasks.manual_tasks,
+          totalSchedules: adminResponse.value.data.tasks.total,
+          activeSchedules: adminResponse.value.data.tasks.in_progress + adminResponse.value.data.tasks.scheduled,
         };
 
         setStats(mappedStats);
         console.log('✅ Stats mapped successfully:', mappedStats);
-      } else {
-        throw new Error(response.message || 'Failed to load dashboard data');
       }
+
+      // Handle AI Analytics Charts response
+      if (chartsResponse.status === 'fulfilled' && chartsResponse.value.status === 'success') {
+        console.log('✅ AI charts data loaded:', chartsResponse.value.data);
+        setChartData(chartsResponse.value.data.task_analytics_data);
+      } else if (chartsResponse.status === 'rejected') {
+        console.log('⚠️ AI charts API failed, using fallback data');
+      }
+
+      // Handle AI Dashboard Analytics response
+      if (aiDashboardResponse.status === 'fulfilled' && aiDashboardResponse.value.status === 'success') {
+        console.log('✅ AI dashboard analytics loaded:', aiDashboardResponse.value.data);
+        setAiAnalyticsData(aiDashboardResponse.value.data);
+      } else if (aiDashboardResponse.status === 'rejected') {
+        console.log('⚠️ AI dashboard analytics API failed, using fallback data');
+      }
+
+      // If all APIs failed, use fallback data
+      if (adminResponse.status === 'rejected' && 
+          chartsResponse.status === 'rejected' && 
+          aiDashboardResponse.status === 'rejected') {
+        throw new Error('All APIs failed to load');
+      }
+
     } catch (error: any) {
       console.error('❌ Error loading dashboard data:', error);
       setError(error.message || 'Failed to load dashboard data');
 
-      // Fallback to demo data if API fails
+      // Fallback to demo data if APIs fail
       setStats({
         totalUsers: 1247,
         activeUsers: 892,
@@ -134,6 +165,15 @@ export default function DashboardScreen() {
         totalSchedules: 3456,
         activeSchedules: 2890,
       });
+
+      // Fallback chart data
+      setChartData([
+        { label: 'Hoàn thành', value: 6789, color: '#28a745' },
+        { label: 'Đang tiến hành', value: 1234, color: '#ffc107' },
+        { label: 'Đã lên lịch', value: 911, color: '#007bff' },
+        { label: 'Đã hủy', value: 234, color: '#dc3545' },
+        { label: 'Đã hoãn lại', value: 156, color: '#17a2b8' },
+      ]);
     }
   }, []);
 
@@ -265,10 +305,19 @@ export default function DashboardScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Đang tải dữ liệu dashboard...</Text>
+        <Text style={styles.loadingSubtext}>
+          Đang tải thống kê admin và AI analytics...
+        </Text>
         {error && (
-          <Text style={styles.errorText}>
-            {error}
-          </Text>
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning-outline" size={24} color={Colors.danger || '#e74c3c'} />
+            <Text style={styles.errorText}>
+              {error}
+            </Text>
+            <Text style={styles.errorSubtext}>
+              Sử dụng dữ liệu demo nếu API không khả dụng
+            </Text>
+          </View>
         )}
       </View>
     );
@@ -288,8 +337,26 @@ export default function DashboardScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <Text style={styles.subtitle}>Tổng quan hệ thống quản lý lịch trình</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+          <Text style={styles.subtitle}>Tổng quan hệ thống quản lý lịch trình</Text>
+        </View>
+        
+        {/* API Status Indicators */}
+        <View style={styles.apiStatusContainer}>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: dashboardData ? Colors.success : Colors.danger }]} />
+            <Text style={styles.statusText}>Admin</Text>
+          </View>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: aiAnalyticsData ? Colors.success : Colors.warning }]} />
+            <Text style={styles.statusText}>AI API</Text>
+          </View>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: chartData.length > 0 ? Colors.success : Colors.warning }]} />
+            <Text style={styles.statusText}>Charts</Text>
+          </View>
+        </View>
       </View>
 
       {/* Overview Stats Grid */}
@@ -320,11 +387,14 @@ export default function DashboardScreen() {
         />
         <StatCard
           title="AI Phân tích"
-          value={stats.aiAnalyzedTasks.toLocaleString()}
-          subtitle={`${aiAnalysisRate}% của tổng Task`}
+          value={aiAnalyticsData?.ai_performance_metrics?.total_ai_analyses?.toLocaleString() || stats.aiAnalyzedTasks.toLocaleString()}
+          subtitle={aiAnalyticsData ? `${(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100).toFixed(1)}% thành công` : `${aiAnalysisRate}% của tổng Task`}
           icon="analytics-outline"
           color={Colors.info || '#3498db'}
-          trend={{ value: 23, isPositive: true }}
+          trend={{ 
+            value: aiAnalyticsData ? Math.round(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100) : 23, 
+            isPositive: true 
+          }}
         />
       </View>
 
@@ -345,40 +415,81 @@ export default function DashboardScreen() {
 
       {/* AI Insights Section */}
       <View style={styles.aiSection}>
-        <Text style={styles.sectionTitle}>🤖 Thông tin chi tiết về AI</Text>
-        <View style={styles.insightCard}>
-          <View style={styles.insightHeader}>
-            <Ionicons name="bulb-outline" size={20} color={Colors.warning} />
-            <Text style={styles.insightTitle}>Thống kê người dùng</Text>
+        <Text style={styles.sectionTitle}>🤖 Thống kê AI Analytics</Text>
+        
+        {/* AI Performance Metrics */}
+        {aiAnalyticsData?.ai_performance_metrics && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Ionicons name="analytics-outline" size={20} color={Colors.primary} />
+              <Text style={styles.insightTitle}>Hiệu suất AI</Text>
+            </View>
+            <Text style={styles.insightText}>
+              Tổng số phân tích AI: {aiAnalyticsData.ai_performance_metrics.total_ai_analyses.toLocaleString()}
+              {'\n'}Tỷ lệ thành công: {(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100).toFixed(1)}%
+              {'\n'}Điểm tin cậy trung bình: {(aiAnalyticsData.ai_performance_metrics.average_confidence_score * 100).toFixed(1)}%
+              {'\n'}Thời gian xử lý TB: {aiAnalyticsData.ai_performance_metrics.average_processing_time.toFixed(1)}s
+            </Text>
           </View>
-          <Text style={styles.insightText}>
-            Có {stats.totalUsers.toLocaleString()} người dùng tổng cộng, trong đó {userActiveRate}% đang hoạt động tích cực.
-            Tuần này có {stats.newUsersThisWeek} người dùng mới đăng ký.
-          </Text>
-        </View>
+        )}
 
-        <View style={styles.insightCard}>
-          <View style={styles.insightHeader}>
-            <Ionicons name="trending-up-outline" size={20} color={Colors.success} />
-            <Text style={styles.insightTitle}>Thống kê task</Text>
+        {/* User Feedback */}
+        {aiAnalyticsData?.user_feedback_quality && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Ionicons name="thumbs-up-outline" size={20} color={Colors.success} />
+              <Text style={styles.insightTitle}>Phản hồi người dùng</Text>
+            </View>
+            <Text style={styles.insightText}>
+              Tỷ lệ phê duyệt: {(aiAnalyticsData.user_feedback_quality.user_approval_rate * 100).toFixed(1)}%
+              {'\n'}Đánh giá TB: {aiAnalyticsData.user_feedback_quality.average_user_rating.toFixed(1)}/5
+              {'\n'}Độ chính xác khuyến nghị: {(aiAnalyticsData.user_feedback_quality.ai_recommendation_accuracy * 100).toFixed(1)}%
+            </Text>
           </View>
-          <Text style={styles.insightText}>
-            Có {stats.totalTasks.toLocaleString()} task tổng cộng với tỷ lệ hoàn thành {taskCompletionRate}%.
-            {dashboardData?.tasks.manual_tasks.toLocaleString()} task được tạo thủ công.
-          </Text>
-        </View>
+        )}
 
-        <View style={styles.insightCard}>
-          <View style={styles.insightHeader}>
-            <Ionicons name="time-outline" size={20} color={Colors.info || '#3498db'} />
-            <Text style={styles.insightTitle}>Hoạt động gần đây</Text>
+        {/* Processing Statistics */}
+        {aiAnalyticsData?.processing_statistics && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Ionicons name="cog-outline" size={20} color={Colors.warning} />
+              <Text style={styles.insightTitle}>Thống kê xử lý</Text>
+            </View>
+            <Text style={styles.insightText}>
+              Thành công lần đầu: {aiAnalyticsData.processing_statistics.retry_counts.successful_first_attempt}
+              {'\n'}Cần thử lại: {aiAnalyticsData.processing_statistics.retry_counts.required_retry}
+              {'\n'}Thất bại sau retry: {aiAnalyticsData.processing_statistics.retry_counts.failed_after_retry}
+              {'\n'}Độ tin cậy cao: {aiAnalyticsData.processing_statistics.confidence_level_distribution.high}
+            </Text>
           </View>
-          <Text style={styles.insightText}>
-            {dashboardData?.recent_activity.recent_users.length || 0} người dùng mới trong tuần.
-            {dashboardData?.recent_activity.recent_tasks.length || 0} task được tạo gần đây.
-            Tỷ lệ hoàn thành: {dashboardData?.summary.completion_rate || 0}%.
-          </Text>
-        </View>
+        )}
+
+        {/* Fallback to original insights if AI data not available */}
+        {!aiAnalyticsData && (
+          <>
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="bulb-outline" size={20} color={Colors.warning} />
+                <Text style={styles.insightTitle}>Thống kê người dùng</Text>
+              </View>
+              <Text style={styles.insightText}>
+                Có {stats.totalUsers.toLocaleString()} người dùng tổng cộng, trong đó {userActiveRate}% đang hoạt động tích cực.
+                Tuần này có {stats.newUsersThisWeek} người dùng mới đăng ký.
+              </Text>
+            </View>
+
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="trending-up-outline" size={20} color={Colors.success} />
+                <Text style={styles.insightTitle}>Thống kê task</Text>
+              </View>
+              <Text style={styles.insightText}>
+                Có {stats.totalTasks.toLocaleString()} task tổng cộng với tỷ lệ hoàn thành {taskCompletionRate}%.
+                {dashboardData?.tasks.manual_tasks.toLocaleString()} task được tạo thủ công.
+              </Text>
+            </View>
+          </>
+        )}
       </View>
 
       {/* Quick Actions */}
@@ -445,7 +556,13 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 24
+    paddingBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
     ...Typography.h1,
@@ -455,6 +572,44 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.body1,
     color: Colors.text.secondary,
+  },
+  apiStatusContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    fontSize: 10,
+  },
+  loadingSubtext: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  errorSubtext: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    marginTop: 4,
+    textAlign: 'center',
   },
 
   // Stats Grid

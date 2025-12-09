@@ -18,8 +18,10 @@ import {
   View,
   Vibration
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
+import { NotificationAPI } from '../../api/notifications.api';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -47,9 +49,11 @@ interface SelectableTaskCardProps {
   task: SelectableTask;
   isSelected: boolean;
   onToggleSelect: (taskId: string) => void;
+  onDelete: (taskId: string) => void;
+  isDeleting: boolean;
 }
 
-const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTaskCardProps) => {
+const SelectableTaskCard = ({ task, isSelected, onToggleSelect, onDelete, isDeleting }: SelectableTaskCardProps) => {
   const formatDateTime = (datetime: string) => {
     const date = new Date(datetime);
     return `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', {
@@ -57,6 +61,22 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
       minute: '2-digit'
     })}`;
   };
+
+  const renderDeleteAction = () => (
+    <View style={styles.deleteAction}>
+      <TouchableOpacity
+        style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+        onPress={() => !isDeleting && onDelete(task.task_id)}
+        disabled={isDeleting}
+      >
+        {isDeleting ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Ionicons name="trash" size={24} color="#FFFFFF" />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 
   const getSourceIcon = (source: string) => {
     return source === 'manual' ? 'create-outline' : 'cloud-download-outline';
@@ -73,15 +93,17 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
   };
 
   return (
-    <Pressable
-      style={[
-        styles.taskCard,
-        isSelected && styles.selectedTaskCard,
-        !task.is_selectable && styles.disabledTaskCard
-      ]}
-      onPress={() => task.is_selectable && onToggleSelect(task.task_id)}
-      disabled={!task.is_selectable}
-    >
+    <Swipeable renderRightActions={renderDeleteAction}>
+      <Pressable
+        style={[
+          styles.taskCard,
+          isSelected && styles.selectedTaskCard,
+          !task.is_selectable && styles.disabledTaskCard,
+          isDeleting && styles.deletingTaskCard
+        ]}
+        onPress={() => task.is_selectable && onToggleSelect(task.task_id)}
+        disabled={!task.is_selectable || isDeleting}
+      >
       <View style={styles.taskHeader}>
         <View style={styles.taskMainInfo}>
           <View style={styles.checkboxContainer}>
@@ -167,7 +189,8 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect }: SelectableTask
           </View>
         )}
       </View>
-    </Pressable>
+      </Pressable>
+    </Swipeable>
   );
 };
 
@@ -190,6 +213,7 @@ export default function AITaskSelectionScreen() {
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
+  const [deletingTasks, setDeletingTasks] = useState<Set<string>>(new Set());
 
   const sourceOptions = [
     { label: 'Tất cả', value: 'all' },
@@ -245,6 +269,84 @@ export default function AITaskSelectionScreen() {
     setRefreshing(true);
     loadTasks();
   }, [loadTasks]);
+
+  const handleDeleteTask = async (taskId: string) => {
+    const task = tasks.find(t => t.task_id === taskId);
+    if (!task) return;
+
+    Alert.alert(
+      "Xác nhận xóa",
+      `Bạn có chắc chắn muốn xóa nhiệm vụ "${task.title}"?`,
+      [
+        {
+          text: "Hủy",
+          style: "cancel"
+        },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => confirmDeleteTask(taskId)
+        }
+      ]
+    );
+  };
+
+  const confirmDeleteTask = async (taskId: string) => {
+    try {
+      setDeletingTasks(prev => new Set([...prev, taskId]));
+      
+      console.log(`🗑️ Attempting to delete task: ${taskId}`);
+      
+      // Try to find the most recent analysis_id that might contain this task
+      // For task selection screen, we'll use a special analysis_id or handle it differently
+      let analysisId = 0; // Default for manual tasks without specific analysis
+      
+      try {
+        // Use the complete-removal endpoint for comprehensive deletion
+        await NotificationAPI.deleteTask(
+          taskId,
+          "User deleted from task selection screen - no longer needed for AI analysis",
+          analysisId,
+          "user"
+        );
+        
+        console.log(`✅ Task ${taskId} deleted successfully with complete removal`);
+      } catch (apiError: any) {
+        console.log(`⚠️ Complete removal failed, this might be a task without AI analysis association`);
+        console.log('Error:', apiError.message);
+        
+        // If complete-removal fails, the task might not be part of an AI analysis
+        // In this case, we could implement a simple task deletion endpoint
+        // For now, we'll show this as an expected behavior
+        throw new Error("Nhiệm vụ này có thể đã được xóa hoặc không thuộc phân tích AI nào");
+      }
+
+      // Remove task from local state only if API call succeeded
+      setTasks(prev => prev.filter(t => t.task_id !== taskId));
+      setFilteredTasks(prev => prev.filter(t => t.task_id !== taskId));
+      
+      // Remove from selected tasks if it was selected
+      setSelectedTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+
+      Alert.alert("Thành công", "Nhiệm vụ đã được xóa khỏi hệ thống và dữ liệu AI");
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      Alert.alert(
+        "Lỗi", 
+        error?.response?.data?.message || error?.message || "Không thể xóa nhiệm vụ"
+      );
+    } finally {
+      setDeletingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
+  };
 
   const handleToggleSelect = (taskId: string) => {
     setSelectedTasks(prev => {
@@ -446,6 +548,8 @@ export default function AITaskSelectionScreen() {
       task={item}
       isSelected={selectedTasks.has(item.task_id)}
       onToggleSelect={handleToggleSelect}
+      onDelete={handleDeleteTask}
+      isDeleting={deletingTasks.has(item.task_id)}
     />
   );
 
@@ -1101,5 +1205,35 @@ const styles = StyleSheet.create({
     ...Typography.body2,
     color: Colors.text.primary,
     lineHeight: 20,
+  },
+  deleteAction: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  deleteButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  deletingTaskCard: {
+    opacity: 0.6,
   },
 });
