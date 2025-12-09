@@ -82,7 +82,111 @@ export interface TaskPriorityResponse {
   };
 }
 
+export interface DeleteTaskResponse {
+  status: "success" | "error";
+  message: string;
+  data: {
+    deleted_task: {
+      task_id: string;
+      title: string;
+      description: string;
+      start_time: string;
+      location: string;
+      priority: number;
+      status: string;
+    };
+    deleted_at: string;
+    deletion_reason: string;
+  };
+}
+
 export const NotificationAPI = {
+  // Delete single task with complete removal (deletes task AND updates AI analysis data)
+  deleteTask: async (
+    taskId: string,
+    reason: string,
+    analysisId: number,
+    deletedBy = "user"
+  ): Promise<DeleteTaskResponse> => {
+    try {
+      console.log(`🗑️ Deleting task ${taskId} with complete removal...`);
+      console.log(`📊 Analysis ID: ${analysisId}, Reason: ${reason}`);
+      
+      // Use the new complete-removal endpoint
+      const response = await api.delete(`/ai-analyses/tasks/${taskId}/complete-removal`, {
+        data: {
+          analysis_id: analysisId,
+          reason: reason,
+        },
+      });
+
+      if (response.data.status === "success") {
+        console.log("✅ Task deleted successfully with complete removal");
+        console.log("✅ Task removed from database AND AI analysis data");
+        return response.data;
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error: any) {
+      console.error("❌ Error deleting task with complete removal:", error);
+      throw error;
+    }
+  },
+
+  // Remove task from AI analysis data only (cleanup operation)
+  removeTaskFromAnalysis: async (
+    analysisId: number,
+    taskId: string
+  ): Promise<{ status: string; message: string }> => {
+    try {
+      console.log(`🔄 Removing task ${taskId} from analysis ${analysisId}...`);
+      
+      const response = await api.patch(`/ai-analyses/${analysisId}/remove-task/${taskId}`);
+
+      if (response.data.status === "success") {
+        console.log("✅ Task removed from AI analysis data successfully");
+        return response.data;
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error: any) {
+      console.error("❌ Error removing task from analysis:", error);
+      throw error;
+    }
+  },
+
+  // Bulk delete tasks (for future use)
+  bulkDeleteTasks: async (
+    taskIds: string[],
+    analysisId: number,
+    reason: string,
+    confirm: boolean = true
+  ): Promise<{ status: string; message: string; data: any }> => {
+    try {
+      console.log(`🗑️ Bulk deleting ${taskIds.length} tasks...`);
+      console.log(`📊 Task IDs: ${taskIds.join(', ')}`);
+      
+      const response = await api.delete('/ai-analyses/tasks/bulk-delete', {
+        data: {
+          task_ids: taskIds,
+          analysis_id: analysisId,
+          reason: reason,
+          confirm: confirm,
+        },
+      });
+
+      if (response.data.status === "success") {
+        console.log("✅ Bulk delete completed successfully");
+        return response.data;
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error: any) {
+      console.error("❌ Error in bulk delete:", error);
+      throw error;
+    }
+  },
+
   // Get AI analysis notifications for user
   getAINotifications: async (userId: number): Promise<AINotification[]> => {
     try {

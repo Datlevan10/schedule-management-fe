@@ -1,8 +1,10 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +13,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { NotificationAPI } from '../../api/notifications.api';
 import { Card } from '../../components/common';
 import { Colors, StorageKeys, Typography } from '../../constants';
@@ -37,6 +40,7 @@ export default function NotifyScreen() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingTasks, setDeletingTasks] = useState<Set<string>>(new Set());
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -104,6 +108,63 @@ export default function NotifyScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadNotifications();
+  };
+
+  const handleDeleteTask = async (notification: Notification) => {
+    if (!notification.task_id || !notification.analysis_id) {
+      Alert.alert("Lỗi", "Không thể xóa thông báo này do thiếu thông tin");
+      return;
+    }
+
+    Alert.alert(
+      "Xác nhận xóa",
+      `Bạn có chắc chắn muốn xóa nhiệm vụ "${notification.title}"?`,
+      [
+        {
+          text: "Hủy",
+          style: "cancel"
+        },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => confirmDeleteTask(notification)
+        }
+      ]
+    );
+  };
+
+  const confirmDeleteTask = async (notification: Notification) => {
+    if (!notification.task_id || !notification.analysis_id) return;
+
+    try {
+      setDeletingTasks(prev => new Set([...prev, notification.id]));
+
+      await NotificationAPI.deleteTask(
+        notification.task_id,
+        "User deleted from notification screen",
+        notification.analysis_id,
+        "user"
+      );
+
+      // Remove notification from local state
+      setNotifications(prev =>
+        prev.filter(n => n.id !== notification.id)
+      );
+
+      Alert.alert("Thành công", "Nhiệm vụ đã được xóa");
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      Alert.alert(
+        "Lỗi",
+        error?.response?.data?.message || "Không thể xóa nhiệm vụ"
+      );
+    } finally {
+      setDeletingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notification.id);
+        return newSet;
+      });
+    }
   };
 
   const getTypeIcon = (type: Notification['type']) => {
@@ -178,6 +239,31 @@ export default function NotifyScreen() {
     }
   };
 
+  const renderDeleteAction = (notification: Notification) => {
+    const isDeleting = deletingTasks.has(notification.id);
+    const canDelete = notification.task_id && notification.analysis_id;
+
+    if (!canDelete) return null;
+
+    return (
+      <View style={styles.deleteAction}>
+        <TouchableOpacity
+          style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+          onPress={() => !isDeleting && handleDeleteTask(notification)}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.deleteIcon}>
+            <MaterialIcons name='delete' size={30} />
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const filteredNotifications = filter === 'unread'
     ? notifications.filter(n => !n.isRead)
     : notifications;
@@ -248,40 +334,45 @@ export default function NotifyScreen() {
           </Card>
         ) : (
           filteredNotifications.map((notification) => (
-            <TouchableOpacity
+            <Swipeable
               key={notification.id}
-              onPress={() => handleNotificationPress(notification)}
+              renderRightActions={() => renderDeleteAction(notification)}
             >
-              <Card>
-                <View style={styles.notificationHeader}>
-                  <View style={styles.iconContainer}>
-                    <Text style={styles.typeIcon}>{getTypeIcon(notification.type)}</Text>
-                  </View>
-                  <View style={styles.notificationContent}>
-                    <View style={styles.titleRow}>
-                      <Text style={[
-                        styles.notificationTitle,
-                        !notification.isRead && styles.unreadTitle,
-                      ]}>
-                        {notification.title}
-                      </Text>
-                      <View
-                        style={[
-                          styles.priorityDot,
-                          { backgroundColor: getPriorityColor(notification.priority) },
-                        ]}
-                      />
+              <TouchableOpacity onPress={() => handleNotificationPress(notification)}>
+                <Card style={[
+                  styles.notificationCard,
+                  deletingTasks.has(notification.id) && styles.deletingCard
+                ]}>
+                  <View style={styles.notificationHeader}>
+                    <View style={styles.iconContainer}>
+                      <Text style={styles.typeIcon}>{getTypeIcon(notification.type)}</Text>
                     </View>
-                    <Text style={styles.notificationDescription}>
-                      {notification.description}
-                    </Text>
-                    <Text style={styles.notificationTime}>
-                      {notification.time}
-                    </Text>
+                    <View style={styles.notificationContent}>
+                      <View style={styles.titleRow}>
+                        <Text style={[
+                          styles.notificationTitle,
+                          !notification.isRead && styles.unreadTitle,
+                        ]}>
+                          {notification.title}
+                        </Text>
+                        <View
+                          style={[
+                            styles.priorityDot,
+                            { backgroundColor: getPriorityColor(notification.priority) },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.notificationDescription}>
+                        {notification.description}
+                      </Text>
+                      <Text style={styles.notificationTime}>
+                        {notification.time}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
+                </Card>
+              </TouchableOpacity>
+            </Swipeable>
           ))
         )}
       </View>
@@ -484,5 +575,33 @@ const styles = StyleSheet.create({
     ...Typography.body1,
     color: Colors.text.secondary,
     marginTop: 10,
+  },
+  deleteAction: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  deleteButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    }
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  deleteIcon: {
+    fontSize: 40,
+    color: '#FFFFFF',
   },
 });
