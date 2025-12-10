@@ -347,15 +347,17 @@ export default function CreateTaskScreen() {
           return;
         }
 
+        // For React Native, the file needs to be in a specific format for FormData
         importData = {
           import_type: 'file_upload',
           source_type: sourceType,
           file: {
             uri: file.uri,
-            type: file.mimeType,
+            type: file.mimeType || 'application/octet-stream',
             name: file.name,
-          },
-        };
+          } as any,
+          user_id: user?.id, // Add user_id to the request
+        } as any;
       } else {
         if (!textContent.trim()) {
           Alert.alert('Lỗi', 'Vui lòng nhập nội dung');
@@ -366,7 +368,8 @@ export default function CreateTaskScreen() {
           import_type: importType,
           source_type: importType === 'manual_input' ? 'manual' : 'txt',
           raw_content: textContent,
-        };
+          user_id: user?.id, // Add user_id to the request
+        } as any;
       }
 
       const response = await ScheduleImportNewAPI.createImport(importData);
@@ -377,8 +380,8 @@ export default function CreateTaskScreen() {
           `Việc nhập khẩu ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn đã được bắt đầu. ID nhập khẩu: ${response.data.id}`,
           [
             {
-              text: 'Xem tiến trình',
-              onPress: () => router.push(`/schedule/import/${response.data.id}`),
+              text: 'Xem kết quả',
+              onPress: () => router.push(`/screens/Schedule/ImportResultScreen?id=${response.data.id}`),
             },
             {
               text: 'OK',

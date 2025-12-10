@@ -129,7 +129,7 @@ export class FileDownloadManager {
     }
   }
 
-  private static async saveBase64File(
+  static async saveBase64File(
     base64Content: string,
     fileName: string
   ): Promise<boolean> {
