@@ -387,12 +387,12 @@ export default function DashboardScreen() {
         />
         <StatCard
           title="AI Phân tích"
-          value={aiAnalyticsData?.ai_performance_metrics?.total_ai_analyses?.toLocaleString() || stats.aiAnalyzedTasks.toLocaleString()}
-          subtitle={aiAnalyticsData ? `${(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100).toFixed(1)}% thành công` : `${aiAnalysisRate}% của tổng Task`}
+          value={aiAnalyticsData?.ai_performance?.total_analyses?.toLocaleString() || stats.aiAnalyzedTasks.toLocaleString()}
+          subtitle={aiAnalyticsData ? `${(aiAnalyticsData.ai_performance.success_rate).toFixed(1)}% thành công` : `${aiAnalysisRate}% của tổng Task`}
           icon="analytics-outline"
           color={Colors.info || '#3498db'}
           trend={{ 
-            value: aiAnalyticsData ? Math.round(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100) : 23, 
+            value: aiAnalyticsData ? Math.round(aiAnalyticsData.ai_performance.success_rate) : 23, 
             isPositive: true 
           }}
         />
@@ -418,32 +418,34 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>🤖 Thống kê AI Analytics</Text>
         
         {/* AI Performance Metrics */}
-        {aiAnalyticsData?.ai_performance_metrics && (
+        {aiAnalyticsData?.ai_performance && (
           <View style={styles.insightCard}>
             <View style={styles.insightHeader}>
               <Ionicons name="analytics-outline" size={20} color={Colors.primary} />
               <Text style={styles.insightTitle}>Hiệu suất AI</Text>
             </View>
             <Text style={styles.insightText}>
-              Tổng số phân tích AI: {aiAnalyticsData.ai_performance_metrics.total_ai_analyses.toLocaleString()}
-              {'\n'}Tỷ lệ thành công: {(aiAnalyticsData.ai_performance_metrics.ai_success_rate * 100).toFixed(1)}%
-              {'\n'}Điểm tin cậy trung bình: {(aiAnalyticsData.ai_performance_metrics.average_confidence_score * 100).toFixed(1)}%
-              {'\n'}Thời gian xử lý TB: {aiAnalyticsData.ai_performance_metrics.average_processing_time.toFixed(1)}s
+              Tổng số phân tích AI: {aiAnalyticsData.ai_performance.total_analyses.toLocaleString()}
+              {'\n'}Tỷ lệ thành công: {aiAnalyticsData.ai_performance.success_rate.toFixed(1)}%
+              {'\n'}Điểm tin cậy trung bình: {(aiAnalyticsData.ai_performance.average_confidence * 100).toFixed(1)}%
+              {'\n'}Thời gian xử lý TB: {(aiAnalyticsData.ai_performance.average_processing_time / 1000).toFixed(1)}s
+              {'\n'}Chi phí tổng: ${aiAnalyticsData.ai_performance.total_cost.toFixed(2)}
             </Text>
           </View>
         )}
 
         {/* User Feedback */}
-        {aiAnalyticsData?.user_feedback_quality && (
+        {aiAnalyticsData?.processing_statistics?.user_feedback && (
           <View style={styles.insightCard}>
             <View style={styles.insightHeader}>
               <Ionicons name="thumbs-up-outline" size={20} color={Colors.success} />
               <Text style={styles.insightTitle}>Phản hồi người dùng</Text>
             </View>
             <Text style={styles.insightText}>
-              Tỷ lệ phê duyệt: {(aiAnalyticsData.user_feedback_quality.user_approval_rate * 100).toFixed(1)}%
-              {'\n'}Đánh giá TB: {aiAnalyticsData.user_feedback_quality.average_user_rating.toFixed(1)}/5
-              {'\n'}Độ chính xác khuyến nghị: {(aiAnalyticsData.user_feedback_quality.ai_recommendation_accuracy * 100).toFixed(1)}%
+              Tỷ lệ phê duyệt: {aiAnalyticsData.processing_statistics.user_feedback.approval_rate.toFixed(1)}%
+              {'\n'}Đánh giá TB: {aiAnalyticsData.processing_statistics.user_feedback.average_rating.toFixed(1)}/5
+              {'\n'}Tổng số đánh giá: {aiAnalyticsData.processing_statistics.user_feedback.total_rated}
+              {'\n'}Phân tích đã duyệt: {aiAnalyticsData.processing_statistics.user_feedback.approved_analyses}
             </Text>
           </View>
         )}
@@ -456,10 +458,28 @@ export default function DashboardScreen() {
               <Text style={styles.insightTitle}>Thống kê xử lý</Text>
             </View>
             <Text style={styles.insightText}>
-              Thành công lần đầu: {aiAnalyticsData.processing_statistics.retry_counts.successful_first_attempt}
-              {'\n'}Cần thử lại: {aiAnalyticsData.processing_statistics.retry_counts.required_retry}
-              {'\n'}Thất bại sau retry: {aiAnalyticsData.processing_statistics.retry_counts.failed_after_retry}
-              {'\n'}Độ tin cậy cao: {aiAnalyticsData.processing_statistics.confidence_level_distribution.high}
+              Tỷ lệ lỗi: {(aiAnalyticsData.processing_statistics.processing_efficiency.error_rate * 100).toFixed(1)}%
+              {'\n'}Retry trung bình: {aiAnalyticsData.processing_statistics.processing_efficiency.average_retry_count}
+              {'\n'}Model GPT-4o-mini: {aiAnalyticsData.processing_statistics.ai_models['gpt-4o-mini'] || 0}
+              {'\n'}Loại optimization: {aiAnalyticsData.processing_statistics.analysis_types.optimization || 0}
+              {'\n'}Độ tin cậy cao: {aiAnalyticsData.processing_statistics.confidence_distribution.high}
+            </Text>
+          </View>
+        )}
+
+        {/* Task Analytics */}
+        {aiAnalyticsData?.task_analytics && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Ionicons name="bar-chart-outline" size={20} color={Colors.info || '#3498db'} />
+              <Text style={styles.insightTitle}>Thống kê Task</Text>
+            </View>
+            <Text style={styles.insightText}>
+              Tổng số task: {aiAnalyticsData.task_analytics.total_tasks}
+              {'\n'}Tỷ lệ hoàn thành: {aiAnalyticsData.task_analytics.completion_rate.toFixed(1)}%
+              {'\n'}Đang tiến hành: {aiAnalyticsData.task_analytics.status_counts.in_progress}
+              {'\n'}Đã hoàn thành: {aiAnalyticsData.task_analytics.status_counts.completed}
+              {'\n'}Đã lên lịch: {aiAnalyticsData.task_analytics.status_counts.scheduled}
             </Text>
           </View>
         )}

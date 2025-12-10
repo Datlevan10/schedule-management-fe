@@ -7,60 +7,97 @@ export interface ChartData {
 }
 
 export interface DashboardAnalytics {
-  task_status_analytics: {
-    completed_tasks: number;
-    in_progress_tasks: number;
-    scheduled_tasks: number;
-    cancelled_tasks: number;
-    postponed_tasks: number;
-  };
-  ai_performance_metrics: {
-    total_ai_analyses: number;
-    ai_success_rate: number;
-    average_confidence_score: number;
+  ai_performance: {
+    total_analyses: number;
+    successful_analyses: number;
+    failed_analyses: number;
+    success_rate: number;
+    average_confidence: number;
     average_processing_time: number;
-    total_api_costs: number;
-    total_token_usage: number;
-    tasks_analyzed_per_analysis: number;
+    average_tasks_per_analysis: number;
+    total_cost: number;
+    total_tasks_analyzed: number;
+    total_tokens: number;
   };
-  user_feedback_quality: {
-    user_approval_rate: number;
-    average_user_rating: number;
-    ai_recommendation_accuracy: number;
-    confidence_vs_approval_correlation: number;
-  };
-  trend_analysis: {
-    daily_completion_trends: Array<{
-      date: string;
+  task_analytics: {
+    total_tasks: number;
+    completion_rate: number;
+    status_counts: {
       completed: number;
-      created: number;
-    }>;
-    period_summary: {
-      start_date: string;
-      end_date: string;
-      total_tasks_created: number;
-      total_tasks_completed: number;
-      average_completion_rate: number;
+      in_progress: number;
+      scheduled: number;
+      cancelled: number;
+      postponed: number;
+      pending: number;
+    };
+    status_percentages: {
+      completed: number;
+      in_progress: number;
+      scheduled: number;
+      cancelled: number;
+      postponed: number;
+      pending: number;
     };
   };
   processing_statistics: {
-    ai_model_usage: {
+    ai_models: {
       [key: string]: number;
     };
-    retry_counts: {
-      successful_first_attempt: number;
-      required_retry: number;
-      failed_after_retry: number;
-    };
-    analysis_type_distribution: {
+    analysis_types: {
       [key: string]: number;
     };
-    confidence_level_distribution: {
+    confidence_distribution: {
       high: number;
       medium: number;
       low: number;
     };
+    processing_efficiency: {
+      average_retry_count: number;
+      error_rate: number;
+    };
+    user_feedback: {
+      approval_rate: number;
+      approved_analyses: number;
+      average_rating: number;
+      total_rated: number;
+    };
   };
+  recommendation_accuracy: {
+    total_recommendations: number;
+    approved_recommendations: number;
+    accuracy_score: number;
+    user_satisfaction: number;
+    confidence_vs_approval: {
+      high_confidence_approved: number;
+      medium_confidence_approved: number;
+      low_confidence_approved: number;
+    };
+  };
+  completion_trends: {
+    daily_trends: Array<{
+      date: string;
+      completed_tasks: number;
+      total_tasks: number;
+      completion_rate: number;
+    }>;
+    period_summary: {
+      total_days: number;
+      average_daily_tasks: number;
+      average_daily_completion_rate: number;
+    };
+  };
+  summary: {
+    total_ai_analyses: number;
+    total_tasks_processed: number;
+    ai_success_rate: number;
+    average_confidence_score: number;
+  };
+  period: {
+    from: string;
+    to: string;
+    user_filter: number | null;
+  };
+  generated_at: string;
 }
 
 export interface ChartsResponse {
