@@ -231,7 +231,7 @@ export interface AnalysisHistoryResponse {
 }
 
 export const TaskSelectionAPI = {
-  // Get all user tasks for selection
+  // Get all user tasks for selection (including manual and imported)
   getUserTaskList: async (userId: number, filters?: TaskListFilters): Promise<TaskListResponse> => {
     try {
       console.log('🔍 Fetching user task list for selection:', { userId, filters });
@@ -242,6 +242,45 @@ export const TaskSelectionAPI = {
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching user task list:', error);
+      throw error;
+    }
+  },
+
+  // Get imported events/tasks by user ID
+  getImportedTasks: async (userId: number): Promise<any> => {
+    try {
+      console.log('🔍 Fetching imported tasks:', { userId });
+      const response = await api.get(`/events/imported?user_id=${userId}`);
+      console.log('✅ Imported tasks retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching imported tasks:', error);
+      throw error;
+    }
+  },
+
+  // Get imported events grouped by source
+  getImportedTasksGrouped: async (userId: number): Promise<any> => {
+    try {
+      console.log('🔍 Fetching imported tasks grouped:', { userId });
+      const response = await api.get(`/events/imported-grouped?user_id=${userId}`);
+      console.log('✅ Imported tasks grouped retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching imported tasks grouped:', error);
+      throw error;
+    }
+  },
+
+  // Get all events for a user (manual + imported)
+  getAllUserEvents: async (userId: number): Promise<any> => {
+    try {
+      console.log('🔍 Fetching all user events:', { userId });
+      const response = await api.get(`/events/user/${userId}`);
+      console.log('✅ All user events retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching all user events:', error);
       throw error;
     }
   },

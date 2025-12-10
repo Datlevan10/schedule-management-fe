@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -133,8 +133,8 @@ export default function ResetPasswordScreen() {
         title = 'Invalid Reset Code';
         message = 'The reset code you entered is invalid or has expired. Please request a new password reset email.';
       } else if (result.error?.includes('User not found')) {
-        title = 'Account Not Found';
-        message = 'No account found with this email address. Please check your email or create a new account.';
+        title = 'Không tìm thấy tài khoản';
+        message = 'Không tìm thấy tài khoản nào với địa chỉ email này. Vui lòng kiểm tra email của bạn hoặc tạo tài khoản mới.';
       } else if (result.error?.includes('weak') || result.error?.includes('password')) {
         title = 'Password Requirements';
         message = 'Your password doesn\'t meet the security requirements. Please ensure it has uppercase, lowercase, numbers, and is at least 8 characters.';

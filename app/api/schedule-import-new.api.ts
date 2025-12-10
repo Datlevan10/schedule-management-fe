@@ -110,6 +110,7 @@ export interface CreateScheduleImportRequest {
   source_type: 'csv' | 'excel' | 'txt' | 'manual' | 'json';
   raw_content?: string;
   file?: any; // File object for uploads
+  user_id?: number; // Optional user ID
 }
 
 export interface ScheduleImportResponse {
@@ -211,7 +212,19 @@ export const ScheduleImportNewAPI = {
         const formData = new FormData();
         formData.append('import_type', data.import_type);
         formData.append('source_type', data.source_type);
-        formData.append('file', data.file);
+        
+        // Add user_id if provided
+        if (data.user_id) {
+          formData.append('user_id', data.user_id.toString());
+        }
+        
+        // In React Native, file needs to be in a specific format
+        const file = data.file as any;
+        formData.append('file', {
+          uri: file.uri,
+          type: file.type || 'application/octet-stream',
+          name: file.name || 'upload.csv',
+        } as any);
 
         const response = await api.post<ScheduleImportResponse>('/schedule-imports', formData, {
           headers: {
@@ -225,6 +238,7 @@ export const ScheduleImportNewAPI = {
           import_type: data.import_type,
           source_type: data.source_type,
           raw_content: data.raw_content,
+          user_id: data.user_id, // Include user_id if provided
         };
 
         const response = await api.post<ScheduleImportResponse>('/schedule-imports', requestData);
@@ -308,6 +322,16 @@ export const ScheduleImportNewAPI = {
       throw error;
     }
   },
+  
+  getImportEntries: async (importId: number): Promise<ScheduleEntriesResponse> => {
+    try {
+      const response = await api.get<ScheduleEntriesResponse>(`/schedule-imports/${importId}/entries`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching import entries:', error);
+      throw error;
+    }
+  },
 
   updateEntry: async (entryId: number, data: Partial<ScheduleEntry>): Promise<{ success: boolean; data: ScheduleEntry }> => {
     try {
@@ -315,6 +339,72 @@ export const ScheduleImportNewAPI = {
       return response.data;
     } catch (error) {
       console.error('Error updating entry:', error);
+      throw error;
+    }
+  },
+
+  // Export APIs
+  exportImportAsCSV: async (
+    importId: number, 
+    userId: number, 
+    format: 'original' | 'parsed' | 'standard' | 'ai_enhanced' | 'vietnamese_school' = 'standard'
+  ): Promise<TemplateDownloadResponse> => {
+    try {
+      const response = await api.get<TemplateDownloadResponse>(
+        `/schedule-imports/${importId}/export?user_id=${userId}&format=${format}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error exporting import as CSV:', error);
+      throw error;
+    }
+  },
+
+  exportEventsAsCSV: async (
+    importId: number, 
+    userId: number, 
+    format: string = 'standard'
+  ): Promise<TemplateDownloadResponse> => {
+    try {
+      const response = await api.get<TemplateDownloadResponse>(
+        `/schedule-imports/${importId}/export-events?user_id=${userId}&format=${format}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error exporting events as CSV:', error);
+      throw error;
+    }
+  },
+
+  previewExport: async (
+    importId: number, 
+    userId: number, 
+    format: string = 'standard'
+  ): Promise<any> => {
+    try {
+      const response = await api.get(
+        `/schedule-imports/${importId}/preview?user_id=${userId}&format=${format}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error previewing export:', error);
+      throw error;
+    }
+  },
+
+  batchExport: async (
+    importIds: number[], 
+    userId: number, 
+    format: string = 'standard'
+  ): Promise<TemplateDownloadResponse> => {
+    try {
+      const response = await api.post<TemplateDownloadResponse>(
+        `/schedule-imports/export-batch?user_id=${userId}`,
+        { import_ids: importIds, format }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error batch exporting:', error);
       throw error;
     }
   },

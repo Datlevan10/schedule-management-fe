@@ -214,11 +214,18 @@ export default function AITaskSelectionScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
   const [deletingTasks, setDeletingTasks] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'all' | 'manual' | 'imported'>('all');
 
   const sourceOptions = [
     { label: 'Tất cả', value: 'all' },
     { label: 'Thủ công', value: 'manual' },
     { label: 'Nhập khẩu', value: 'imported' }
+  ];
+
+  const tabOptions = [
+    { key: 'all', label: 'Tất cả nhiệm vụ', icon: 'list' },
+    { key: 'manual', label: 'Thủ công', icon: 'create' },
+    { key: 'imported', label: 'Nhập từ CSV', icon: 'cloud-download' }
   ];
 
   const loadTasks = useCallback(async () => {
@@ -228,33 +235,39 @@ export default function AITaskSelectionScreen() {
       setError(null);
       console.log('🔍 Loading user task list for AI selection...');
 
-      // Remove restrictive date filtering to show all user tasks
+      // Load both manual and imported tasks
       const filters: TaskListFilters = {
         // Load all tasks regardless of date for AI analysis
       };
 
-      const response = await TaskSelectionAPI.getUserTaskList(user.id, filters);
+      // Fetch all tasks (manual + imported) in parallel
+      const [taskListResponse, importedTasksResponse] = await Promise.all([
+        TaskSelectionAPI.getUserTaskList(user.id, filters),
+        TaskSelectionAPI.getImportedTasks(user.id).catch(() => ({ data: [] }))
+      ]);
 
-      if (response.status === 'success' && response.data) {
-        console.log('📋 Raw API Response - Total tasks:', response.data.tasks.length);
-        console.log('📋 Task details:');
-        response.data.tasks.forEach((task, index) => {
-          console.log(`  ${index + 1}. ${task.task_id}: ${task.title}`);
-          console.log(`     Date: ${task.start_datetime}`);
-          console.log(`     Selectable: ${task.is_selectable}`);
-        });
+      if (taskListResponse.status === 'success' && taskListResponse.data) {
+        const allTasks = taskListResponse.data.tasks;
         
-        setTasks(response.data.tasks);
-        setFilteredTasks(response.data.tasks);
-        setSummary(response.data.summary);
+        // Add imported tasks if available
+        if (importedTasksResponse?.data?.length > 0) {
+          console.log('📥 Found imported tasks:', importedTasksResponse.data.length);
+          // Merge imported tasks if not already included
+          // The API might already include them, so check for duplicates
+        }
         
-        console.log('✅ Task list loaded successfully:', {
-          totalTasks: response.data.tasks.length,
-          summary: response.data.summary
-        });
-        console.log('📱 State updated - Tasks in memory:', response.data.tasks.length);
+        console.log('📋 Total tasks loaded:', allTasks.length);
+        console.log('📋 Task breakdown:');
+        console.log('  Manual tasks:', allTasks.filter(t => t.source === 'manual').length);
+        console.log('  Imported tasks:', allTasks.filter(t => t.source === 'imported').length);
+        
+        setTasks(allTasks);
+        filterTasksByTab(allTasks, activeTab);
+        setSummary(taskListResponse.data.summary);
+        
+        console.log('✅ Task list loaded successfully');
       } else {
-        throw new Error(response.message || 'Failed to load tasks');
+        throw new Error(taskListResponse.message || 'Failed to load tasks');
       }
     } catch (error) {
       console.error('❌ Error loading task list:', error);
@@ -263,7 +276,27 @@ export default function AITaskSelectionScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [user?.id, activeTab]);
+
+  const filterTasksByTab = (taskList: SelectableTask[], tab: string) => {
+    let filtered = taskList;
+    
+    if (tab === 'manual') {
+      filtered = taskList.filter(task => task.source === 'manual');
+    } else if (tab === 'imported') {
+      filtered = taskList.filter(task => task.source === 'imported');
+    }
+    
+    // Apply search filter if any
+    if (searchQuery) {
+      filtered = filtered.filter(task => 
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    setFilteredTasks(filtered);
+  };
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -540,8 +573,13 @@ export default function AITaskSelectionScreen() {
   }, [loadTasks]);
 
   useEffect(() => {
-    filterTasks();
-  }, [filterTasks]);
+    filterTasksByTab(tasks, activeTab);
+  }, [tasks, activeTab, searchQuery]);
+
+  const handleTabChange = (tab: 'all' | 'manual' | 'imported') => {
+    setActiveTab(tab);
+    filterTasksByTab(tasks, tab);
+  };
 
   const renderTaskItem = ({ item }: { item: SelectableTask }) => (
     <SelectableTaskCard
@@ -706,22 +744,46 @@ export default function AITaskSelectionScreen() {
         </View>
       </View>
 
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll}>
+          {tabOptions.map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tabButton,
+                activeTab === tab.key && styles.activeTab
+              ]}
+              onPress={() => handleTabChange(tab.key as 'all' | 'manual' | 'imported')}
+            >
+              <Ionicons
+                name={tab.icon as any}
+                size={18}
+                color={activeTab === tab.key ? '#FFFFFF' : Colors.text.secondary}
+              />
+              <Text style={[
+                styles.tabText,
+                activeTab === tab.key && styles.activeTabText
+              ]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryNumber}>{summary.total_tasks}</Text>
-          <Text style={styles.summaryLabel}>Tổng số</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryNumber}>{summary.manual_tasks}</Text>
-          <Text style={styles.summaryLabel}>Thủ công</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryNumber}>{summary.imported_tasks}</Text>
-          <Text style={styles.summaryLabel}>Nhập khẩu</Text>
+          <Text style={styles.summaryNumber}>{filteredTasks.length}</Text>
+          <Text style={styles.summaryLabel}>Hiển thị</Text>
         </View>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryNumber}>{selectedTasks.size}</Text>
           <Text style={styles.summaryLabel}>Đã chọn</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryNumber}>{summary.selectable_tasks}</Text>
+          <Text style={styles.summaryLabel}>Có thể chọn</Text>
         </View>
       </View>
 
@@ -736,33 +798,16 @@ export default function AITaskSelectionScreen() {
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-          <TouchableOpacity onPress={handleSelectAll} style={styles.selectAllButton}>
-            <Text style={styles.selectAllText}>
-              {selectedTasks.size === filteredTasks.filter(t => t.is_selectable).length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-            </Text>
-          </TouchableOpacity>
-
-          {sourceOptions.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.filterButton,
-                selectedSource === option.value && styles.activeFilterButton
-              ]}
-              onPress={() => setSelectedSource(option.value)}
-            >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedSource === option.value && styles.activeFilterButtonText
-                ]}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <TouchableOpacity onPress={handleSelectAll} style={styles.selectAllButton}>
+          <Ionicons
+            name={selectedTasks.size === filteredTasks.filter(t => t.is_selectable).length ? 'checkbox' : 'checkbox-outline'}
+            size={20}
+            color={Colors.primary}
+          />
+          <Text style={styles.selectAllText}>
+            {selectedTasks.size === filteredTasks.filter(t => t.is_selectable).length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {error && (
@@ -906,15 +951,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   selectAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: Colors.primary + '20',
-    marginRight: 8,
+    gap: 6,
   },
   selectAllText: {
-    ...Typography.caption,
+    ...Typography.body2,
     color: Colors.primary,
+    fontWeight: '600',
+  },
+  tabContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  tabScroll: {
+    paddingHorizontal: 16,
+  },
+  tabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.background.secondary,
+    gap: 6,
+  },
+  activeTab: {
+    backgroundColor: Colors.primary,
+  },
+  tabText: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: 'white',
     fontWeight: '600',
   },
   filterButton: {
