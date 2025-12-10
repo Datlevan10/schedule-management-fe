@@ -24,10 +24,10 @@ export class FileDownloadManager {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
           {
-            title: "Storage Permission",
-            message: "App needs access to storage to download files",
-            buttonNeutral: "Ask Me Later",
-            buttonNegative: "Cancel",
+            title: "Quyền truy cập bộ nhớ",
+            message: "Ứng dụng cần quyền truy cập bộ nhớ để tải xuống tệp",
+            buttonNeutral: "Hỏi lại sau",
+            buttonNegative: "Hủy",
             buttonPositive: "OK",
           }
         );
@@ -45,8 +45,8 @@ export class FileDownloadManager {
       const hasPermission = await this.requestStoragePermission();
       if (!hasPermission) {
         Alert.alert(
-          "Error",
-          "Storage permission is required to download files"
+          "Lỗi",
+          "Cần có quyền truy cập bộ nhớ để tải xuống tệp"
         );
         return false;
       }
@@ -64,7 +64,7 @@ export class FileDownloadManager {
       );
     } catch (error) {
       console.error("Error downloading template:", error);
-      Alert.alert("Download Error", "Failed to download template file");
+      Alert.alert("Lỗi tải xuống", "Không thể tải xuống tệp mẫu");
       return false;
     }
   }
@@ -74,8 +74,8 @@ export class FileDownloadManager {
       const hasPermission = await this.requestStoragePermission();
       if (!hasPermission) {
         Alert.alert(
-          "Error",
-          "Storage permission is required to download files"
+          "Lỗi",
+          "Cần có quyền truy cập bộ nhớ để tải xuống tệp"
         );
         return false;
       }
@@ -93,7 +93,7 @@ export class FileDownloadManager {
       );
     } catch (error) {
       console.error("Error downloading sample:", error);
-      Alert.alert("Download Error", "Failed to download sample file");
+      Alert.alert("Lỗi tải xuống", "Không thể tải xuống tệp mẫu dữ liệu");
       return false;
     }
   }
@@ -103,8 +103,8 @@ export class FileDownloadManager {
       const hasPermission = await this.requestStoragePermission();
       if (!hasPermission) {
         Alert.alert(
-          "Error",
-          "Storage permission is required to download files"
+          "Lỗi",
+          "Cần có quyền truy cập bộ nhớ để tải xuống tệp"
         );
         return false;
       }
@@ -124,7 +124,7 @@ export class FileDownloadManager {
       );
     } catch (error) {
       console.error("Error downloading instructions:", error);
-      Alert.alert("Download Error", "Failed to download instructions file");
+      Alert.alert("Lỗi tải xuống", "Không thể tải xuống tệp hướng dẫn");
       return false;
     }
   }
@@ -151,7 +151,7 @@ export class FileDownloadManager {
         return true;
       } else {
         // Fallback for platforms where sharing is not available
-        Alert.alert("File Downloaded", `File saved to: ${fileUri}`, [
+        Alert.alert("Tệp đã tải xuống", `Tệp đã được lưu tại: ${fileUri}`, [
           {
             text: "OK",
             onPress: () => {},
@@ -161,7 +161,7 @@ export class FileDownloadManager {
       }
     } catch (error) {
       console.error("Error saving file:", error);
-      Alert.alert("Save Error", "Failed to save file to device");
+      Alert.alert("Lỗi lưu", "Không thể lưu tệp vào thiết bị");
       return false;
     }
   }
@@ -190,8 +190,8 @@ export class FileDownloadManager {
       const hasPermission = await this.requestStoragePermission();
       if (!hasPermission) {
         Alert.alert(
-          "Error",
-          "Storage permission is required to download files"
+          "Lỗi",
+          "Cần có quyền truy cập bộ nhớ để tải xuống tệp"
         );
         return false;
       }
@@ -209,8 +209,8 @@ export class FileDownloadManager {
           });
         } else {
           Alert.alert(
-            "File Downloaded",
-            `File saved to: ${downloadResult.uri}`
+            "Tệp đã tải xuống",
+            `Tệp đã được lưu tại: ${downloadResult.uri}`
           );
         }
         return true;
@@ -221,7 +221,7 @@ export class FileDownloadManager {
       }
     } catch (error) {
       console.error("Error downloading from URL:", error);
-      Alert.alert("Download Error", "Failed to download file");
+      Alert.alert("Lỗi tải xuống", "Không thể tải xuống tệp");
       return false;
     }
   }

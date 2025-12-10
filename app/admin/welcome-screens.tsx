@@ -59,7 +59,7 @@ export default function WelcomeScreensScreen() {
       }
     } catch (error) {
       console.error('Error loading welcome screens:', error);
-      Alert.alert('Error', 'Failed to load welcome screens');
+      Alert.alert('Lỗi', 'Không thể tải màn hình chào mừng');
     } finally {
       setLoading(false);
     }
@@ -125,7 +125,7 @@ export default function WelcomeScreensScreen() {
   const handleImagePicker = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Access to photo library is required');
+      Alert.alert('Cần quyền truy cập', 'Cần có quyền truy cập thư viện ảnh');
       return;
     }
 
@@ -144,7 +144,7 @@ export default function WelcomeScreensScreen() {
   const handleSave = async () => {
     try {
       if (!formData.title.trim() || !formData.subtitle.trim()) {
-        Alert.alert('Error', 'Please fill in all required fields');
+        Alert.alert('Lỗi', 'Vui lòng điền đầy đủ các trường bắt buộc');
         return;
       }
 
@@ -212,29 +212,29 @@ export default function WelcomeScreensScreen() {
       }
     } catch (error) {
       console.error('Error updating screen status:', error);
-      Alert.alert('Error', 'Failed to update screen status');
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái màn hình');
     }
   };
 
   const handleDelete = (screen: WelcomeScreen) => {
     Alert.alert(
-      'Confirm Delete',
-      `Are you sure you want to delete welcome screen "${screen.title}"?`,
+      'Xác nhận xóa',
+      `Bạn có chắc muốn xóa màn hình chào mừng "${screen.title}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Hủy', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await AdminAPI.deleteWelcomeScreen(screen.id);
               if (response.status === 'success') {
-                Alert.alert('Success', 'Welcome screen deleted successfully');
+                Alert.alert('Thành công', 'Màn hình chào mừng đã được xóa thành công');
                 loadWelcomeScreens();
               }
             } catch (error) {
               console.error('Error deleting welcome screen:', error);
-              Alert.alert('Error', 'Failed to delete welcome screen');
+              Alert.alert('Lỗi', 'Không thể xóa màn hình chào mừng');
             }
           },
         },

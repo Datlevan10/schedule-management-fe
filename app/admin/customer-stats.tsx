@@ -29,7 +29,7 @@ export default function CustomerStatsScreen() {
         setStats(response.data);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load customer statistics');
+      Alert.alert('Lỗi', 'Không thể tải thống kê khách hàng');
     } finally {
       setLoading(false);
       setRefreshing(false);

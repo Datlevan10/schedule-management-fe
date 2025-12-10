@@ -40,7 +40,7 @@ export default function EditProfileScreen() {
       }
     } catch (error) {
       console.error('❌ Error loading profile for edit:', error);
-      Alert.alert('Error', 'Failed to load profile');
+      Alert.alert('Lỗi', 'Không thể tải hồ sơ');
     } finally {
       setInitialLoading(false);
     }
@@ -48,7 +48,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!profile.id) {
-      Alert.alert('Error', 'User ID not found');
+      Alert.alert('Lỗi', 'Không tìm thấy ID người dùng');
       return;
     }
 
@@ -101,11 +101,11 @@ export default function EditProfileScreen() {
           const errorDetails = `Status: ${simpleError.response?.status}\nURL: ${simpleError.config?.url}\nMethod: ${simpleError.config?.method}`;
 
           Alert.alert(
-            'Update Failed',
-            `${errorMessage}\n\nTechnical details:\n${errorDetails}`,
+            'Cập nhật thất bại',
+            `${errorMessage}\n\nThông tin kỹ thuật:\n${errorDetails}`,
             [
               { text: 'OK', style: 'cancel' },
-              { text: 'Try Again', onPress: () => handleSave() }
+              { text: 'Thử lại', onPress: () => handleSave() }
             ]
           );
           return;
@@ -117,11 +117,11 @@ export default function EditProfileScreen() {
           { text: 'OK', onPress: () => router.replace('/(tabs)/profile') }
         ]);
       } else {
-        Alert.alert('Error', response?.message || 'Update failed');
+        Alert.alert('Lỗi', response?.message || 'Cập nhật thất bại');
       }
     } catch (error: any) {
       console.error('❌ Unexpected error updating profile:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert('Lỗi', 'Đã xảy ra lỗi không mong đợi');
     } finally {
       setLoading(false);
     }

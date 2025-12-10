@@ -120,7 +120,7 @@ export default function CreateTaskScreen() {
   // Manual Task Creation - Direct to Manual Tasks API (No Authentication Required)
   const handleCreateManualTask = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a task title');
+      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề nhiệm vụ');
       return;
     }
 
@@ -233,7 +233,7 @@ export default function CreateTaskScreen() {
         );
       } else {
         console.log('❌ Unexpected response format:', response);
-        Alert.alert('Error', 'Task creation response was not in expected format');
+        Alert.alert('Lỗi', 'Phản hồi tạo nhiệm vụ không đúng định dạng mong đợi');
       }
     } catch (error: any) {
       console.error('Error creating manual task:', error);
@@ -252,7 +252,7 @@ export default function CreateTaskScreen() {
         errorMessage = `Validation errors:\n${errorDetails}`;
       }
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Lỗi', errorMessage);
     }
   };
 
@@ -304,7 +304,7 @@ export default function CreateTaskScreen() {
       }
     } catch (error) {
       console.error('Error picking file:', error);
-      Alert.alert('Error', 'Failed to select file');
+      Alert.alert('Lỗi', 'Không thể chọn tệp');
     }
   };
 
@@ -330,7 +330,7 @@ export default function CreateTaskScreen() {
       }
     } catch (error) {
       console.error('Download error:', error);
-      Alert.alert('Error', 'Failed to download file');
+      Alert.alert('Lỗi', 'Không thể tải xuống tệp');
     }
   };
 
@@ -343,7 +343,7 @@ export default function CreateTaskScreen() {
 
       if (importType === 'file_upload') {
         if (!file) {
-          Alert.alert('Error', 'Please select a file to upload');
+          Alert.alert('Lỗi', 'Vui lòng chọn tệp để tải lên');
           return;
         }
 
@@ -358,7 +358,7 @@ export default function CreateTaskScreen() {
         };
       } else {
         if (!textContent.trim()) {
-          Alert.alert('Error', 'Please enter some content');
+          Alert.alert('Lỗi', 'Vui lòng nhập nội dung');
           return;
         }
 
@@ -373,11 +373,11 @@ export default function CreateTaskScreen() {
 
       if (response.success) {
         Alert.alert(
-          'Import Started',
-          `Your ${importType === 'file_upload' ? 'file' : 'text'} import has been started. Import ID: ${response.data.id}`,
+          'Đã bắt đầu nhập khẩu',
+          `Việc nhập khẩu ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn đã được bắt đầu. ID nhập khẩu: ${response.data.id}`,
           [
             {
-              text: 'View Progress',
+              text: 'Xem tiến trình',
               onPress: () => router.push(`/schedule/import/${response.data.id}`),
             },
             {
@@ -393,7 +393,7 @@ export default function CreateTaskScreen() {
       }
     } catch (error: any) {
       console.error('Import error:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to start import');
+      Alert.alert('Lỗi', error.response?.data?.message || 'Không thể bắt đầu nhập khẩu');
     } finally {
       setImporting(false);
     }
@@ -433,7 +433,7 @@ export default function CreateTaskScreen() {
           onPress={() => setCreateMethod('manual')}
         >
           <Text style={styles.methodIcon}>
-            <MaterialIcons name="edit" size={40} color={"gray"} />
+            <MaterialIcons name="edit" size={28} color={"gray"} />
           </Text>
           <Text style={[styles.methodTitle, createMethod === 'manual' && styles.selectedText]}>
             Nhiệm vụ thủ công
@@ -448,7 +448,7 @@ export default function CreateTaskScreen() {
           onPress={() => setCreateMethod('import')}
         >
           <Text style={styles.methodIcon}>
-            <MaterialIcons name="upload-file" size={40} color={"gray"} />
+            <MaterialIcons name="upload-file" size={28} color={"gray"} />
           </Text>
           <Text style={[styles.methodTitle, createMethod === 'import' && styles.selectedText]}>
             Nhiệm vụ với nhập file
@@ -881,34 +881,37 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 45,
+    paddingBottom: 12,
   },
   backButton: {
     display: "flex",
     flexDirection: "row",
-    marginRight: 16,
+    marginRight: 12,
   },
   backButtonText: {
-    ...Typography.body1,
+    ...Typography.body2,
     color: Colors.primary,
+    fontSize: 14,
   },
   headerTitle: {
-    ...Typography.h2,
+    ...Typography.h3,
     color: Colors.text.primary,
     flex: 1,
+    fontSize: 18,
   },
   section: {
-    margin: 20,
+    margin: 12,
     marginTop: 0,
-    padding: 20,
+    padding: 14,
     overflow: 'visible',
   },
   sectionTitle: {
-    ...Typography.h3,
+    ...Typography.h4,
     color: Colors.text.primary,
-    marginBottom: 16,
+    marginBottom: 10,
+    fontSize: 16,
   },
   sectionDescription: {
     ...Typography.body2,
@@ -917,12 +920,12 @@ const styles = StyleSheet.create({
   },
   methodGrid: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   methodCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.border.light,
     alignItems: 'center',
@@ -932,20 +935,22 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '10',
   },
   methodIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 24,
+    marginBottom: 6,
   },
   methodTitle: {
-    ...Typography.body1,
+    ...Typography.body2,
     color: Colors.text.primary,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 3,
     textAlign: 'center',
+    fontSize: 13,
   },
   methodDescription: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.secondary,
     textAlign: 'center',
+    fontSize: 11,
   },
   selectedText: {
     color: Colors.primary,
@@ -953,30 +958,31 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: Colors.border.light,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    ...Typography.body1,
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 8,
+    ...Typography.body2,
     color: Colors.text.primary,
     backgroundColor: Colors.background.primary,
-    fontSize: 16,
+    fontSize: 14,
   },
   textArea: {
-    minHeight: 80,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   dateTimeRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 8,
   },
   dateTimeInput: {
     flex: 1,
     marginBottom: 0,
   },
   dateTimeText: {
-    ...Typography.body1,
+    ...Typography.body2,
     color: Colors.text.primary,
+    fontSize: 13,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -1053,18 +1059,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   createButton: {
-    margin: 20,
+    margin: 12,
     marginTop: 0,
     zIndex: 1,
   },
   importGrid: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   importCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.border.light,
     alignItems: 'center',
@@ -1074,23 +1080,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '10',
   },
   importIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 18,
+    marginBottom: 6,
   },
   importTitle: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.secondary,
     textAlign: 'center',
+    fontSize: 11,
   },
   sourceGrid: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 10,
   },
   sourceButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.border.light,
     alignItems: 'center',
@@ -1100,79 +1107,85 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '10',
   },
   sourceIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 16,
+    marginBottom: 3,
   },
   sourceText: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.secondary,
+    fontSize: 11,
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 10,
   },
   button: {
     flex: 1,
   },
   fileInfo: {
     backgroundColor: Colors.background.secondary,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 10,
   },
   fileName: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.primary,
     fontWeight: '500',
+    fontSize: 12,
   },
   fileSize: {
     ...Typography.caption,
     color: Colors.text.secondary,
     marginTop: 2,
+    fontSize: 11,
   },
   templateInfo: {
     backgroundColor: Colors.background.secondary,
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
   },
   templateTitle: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.primary,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 6,
+    fontSize: 12,
   },
   templateActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   templateActionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     backgroundColor: Colors.primary + '20',
-    borderRadius: 6,
+    borderRadius: 4,
   },
   templateActionText: {
     ...Typography.caption,
     color: Colors.primary,
     fontWeight: '600',
+    fontSize: 10,
   },
   textInput: {
     borderWidth: 1,
     borderColor: Colors.border.light,
-    borderRadius: 8,
-    padding: 16,
-    ...Typography.body1,
+    borderRadius: 6,
+    padding: 10,
+    ...Typography.body2,
     color: Colors.text.primary,
-    minHeight: 50,
+    minHeight: 40,
     textAlignVertical: 'top',
+    fontSize: 13,
   },
   importButton: {
-    margin: 20,
+    margin: 12,
     marginTop: 0,
   },
   recentImportCard: {
-    padding: 12,
+    padding: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
@@ -1180,30 +1193,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   importId: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.primary,
     fontWeight: '600',
+    fontSize: 12,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   statusText: {
     ...Typography.caption,
     fontWeight: '600',
+    fontSize: 10,
   },
   importType: {
     ...Typography.caption,
     color: Colors.text.secondary,
-    marginBottom: 2,
+    marginBottom: 1,
+    fontSize: 11,
   },
   importStats: {
     ...Typography.caption,
     color: Colors.text.secondary,
+    fontSize: 11,
   },
   modalContainer: {
     flex: 1,
@@ -1248,54 +1265,56 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   inputLabel: {
-    ...Typography.body1,
+    ...Typography.body2,
     fontWeight: '600',
     color: Colors.text.primary,
-    marginBottom: 8,
+    marginBottom: 6,
+    fontSize: 14,
   },
   radioGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 6,
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.border.light,
     backgroundColor: Colors.background.primary,
     minWidth: '45%',
   },
   radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: Colors.border.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 6,
   },
   radioButtonSelected: {
     borderColor: Colors.primary,
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.primary,
   },
   radioLabel: {
-    ...Typography.body2,
+    ...Typography.caption,
     color: Colors.text.secondary,
     flex: 1,
+    fontSize: 12,
   },
   radioLabelSelected: {
     color: Colors.primary,

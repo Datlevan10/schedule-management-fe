@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
 import { Card } from '../../components/common';
 import { Colors } from '../../constants';
@@ -88,22 +88,22 @@ export default function HomeScreen() {
 
   const handleTemplateSelect = (template: ScheduleImportTemplate) => {
     Alert.alert(
-      'Template Options',
-      `Choose an action for "${template.template_name}"`,
+      'Tùy chọn mẫu lịch',
+      `Chọn hành động cho "${template.template_name}"`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Hủy', style: 'cancel' },
         {
-          text: 'View Details',
+          text: 'Xem chi tiết',
           onPress: () => {
             Alert.alert(
               template.template_name,
-              `${template.template_description}\n\nRequired columns: ${template.format_specifications.required_columns.join(', ')}\n\nOptional columns: ${template.format_specifications.optional_columns.join(', ')}`,
+              `${template.template_description}\n\nCột bắt buộc: ${template.format_specifications.required_columns.join(', ')}\n\nCột tùy chọn: ${template.format_specifications.optional_columns.join(', ')}`,
               [{ text: 'OK' }]
             );
           }
         },
         {
-          text: 'Download Template',
+          text: 'Tải xuống mẫu',
           onPress: () => handleDownloadTemplate(template.id)
         },
       ]
@@ -115,13 +115,13 @@ export default function HomeScreen() {
       const template = templates.find(t => t.id === templateId);
       if (template?.file_information?.download_urls?.template) {
         await Linking.openURL(template.file_information.download_urls.template);
-        Alert.alert('Success', 'Template download started!');
+        Alert.alert('Thành công', 'Tải xuống mẫu đã bắt đầu!');
       } else {
-        Alert.alert('Error', 'Download URL not available');
+        Alert.alert('Lỗi', 'URL tải xuống không có sẵn');
       }
     } catch (error) {
       console.error('Error downloading template:', error);
-      Alert.alert('Error', 'Failed to download template');
+      Alert.alert('Lỗi', 'Không thể tải xuống mẫu');
     }
   };
 
@@ -168,11 +168,11 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl 
-          refreshing={refreshing} 
+        <RefreshControl
+          refreshing={refreshing}
           onRefresh={onRefresh}
           colors={[Colors.primary]}
           tintColor={Colors.primary}
@@ -184,7 +184,7 @@ export default function HomeScreen() {
           <Text style={styles.welcomeText}>Chào mừng trở lại,</Text>
           <Text style={styles.userName}>{user?.name || 'User'}! 👋</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.notificationButton}
           onPress={handleNotificationPress}
         >
@@ -403,9 +403,9 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(12),
   },
   templateFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: "flex-start",
+    gap: 8
   },
   scheduleItems: {
     fontSize: responsiveFontSize.sm,

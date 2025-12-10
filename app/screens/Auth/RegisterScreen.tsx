@@ -67,12 +67,13 @@ export default function RegisterScreen() {
   const { register, isLoading, error, clearError } = useAuth();
 
   const professionLevelOptions = [
-    { label: 'Student', value: 'student' },
-    { label: 'Resident', value: 'resident' },
-    { label: 'Junior', value: 'junior' },
-    { label: 'Senior', value: 'senior' },
-    { label: 'Expert', value: 'expert' },
+    { label: 'Sinh viên / Người mới học', value: 'student' },
+    { label: 'Thực tập sinh / Người mới vào nghề', value: 'resident' },
+    { label: 'Nhân viên Junior', value: 'junior' },
+    { label: 'Nhân viên Senior', value: 'senior' },
+    { label: 'Chuyên gia', value: 'expert' },
   ];
+  
 
   const fetchProfessions = useCallback(async () => {
     try {
@@ -145,11 +146,11 @@ export default function RegisterScreen() {
 
       // Show a more user-friendly error message with retry option
       Alert.alert(
-        'Connection Issue',
-        'Unable to connect to server. Using offline profession list. Please check your internet connection.',
+        'Vấn đề kết nối',
+        'Không thể kết nối đến máy chủ. Sử dụng danh sách nghề nghiệp ngoại tuyến. Vui lòng kiểm tra kết nối internet.',
         [
-          { text: 'Use Offline List', style: 'cancel' },
-          { text: 'Retry', onPress: () => fetchProfessions() }
+          { text: 'Sử dụng danh sách ngoại tuyến', style: 'cancel' },
+          { text: 'Thử lại', onPress: () => fetchProfessions() }
         ]
       );
     } finally {
