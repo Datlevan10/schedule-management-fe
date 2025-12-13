@@ -295,10 +295,40 @@ export default function CreateTaskScreen() {
 
       if (!result?.canceled && result.assets[0]) {
         const selectedFile = result.assets[0];
-        setFile({
+        console.log('📎 Selected file:', {
           name: selectedFile.name,
           uri: selectedFile.uri,
           mimeType: selectedFile.mimeType,
+          size: selectedFile.size,
+        });
+        
+        // Try to read file content for debugging
+        try {
+          // For debugging: Try to fetch and log file content
+          const response = await fetch(selectedFile.uri);
+          const fileContent = await response.text();
+          console.log('📄 File content preview (first 500 chars):');
+          console.log(fileContent.substring(0, 500));
+          console.log('📄 File content length:', fileContent.length, 'characters');
+          
+          // Check if content looks like sample data
+          if (fileContent.includes('Sample ngay') || fileContent.includes('Sample lop')) {
+            console.warn('⚠️ WARNING: File contains sample data!');
+            Alert.alert('Cảnh báo', 'File có vẻ chứa dữ liệu mẫu. Vui lòng kiểm tra lại file của bạn.');
+          }
+        } catch (readError) {
+          console.log('Could not read file for preview:', readError);
+        }
+        
+        // Validate file
+        if (sourceType === 'csv' && !selectedFile.name.toLowerCase().endsWith('.csv')) {
+          Alert.alert('Cảnh báo', 'File được chọn có thể không phải là file CSV');
+        }
+        
+        setFile({
+          name: selectedFile.name,
+          uri: selectedFile.uri,
+          mimeType: selectedFile.mimeType || (sourceType === 'csv' ? 'text/csv' : 'application/octet-stream'),
           size: selectedFile.size,
         });
       }
@@ -348,13 +378,28 @@ export default function CreateTaskScreen() {
         }
 
         // For React Native, the file needs to be in a specific format for FormData
+        // Ensure proper MIME type for CSV files
+        let mimeType = file.mimeType;
+        if (sourceType === 'csv' && (!mimeType || mimeType === 'application/octet-stream')) {
+          mimeType = 'text/csv';
+        }
+        
+        console.log('📁 File details:', {
+          name: file.name,
+          uri: file.uri,
+          mimeType: mimeType,
+          size: file.size,
+          sourceType: sourceType
+        });
+        
         importData = {
           import_type: 'file_upload',
           source_type: sourceType,
           file: {
             uri: file.uri,
-            type: file.mimeType || 'application/octet-stream',
+            type: mimeType || 'text/csv',
             name: file.name,
+            mimeType: mimeType,
           } as any,
           user_id: user?.id, // Add user_id to the request
         } as any;
@@ -373,18 +418,29 @@ export default function CreateTaskScreen() {
       }
 
       const response = await ScheduleImportNewAPI.createImport(importData);
+      console.log('Import response:', response);
 
       if (response.success) {
+        // Import was successful
+        console.log(`✅ CSV import successful! Found ${response.data.total_entries} records`);
+        
         Alert.alert(
-          'Đã bắt đầu nhập khẩu',
-          `Việc nhập khẩu ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn đã được bắt đầu. ID nhập khẩu: ${response.data.id}`,
+          'Nhập khẩu thành công',
+          `Đã nhập ${response.data.total_entries} bản ghi từ ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn.\n\nID nhập khẩu: ${response.data.id}\nTrạng thái: ${response.data.status}`,
           [
             {
-              text: 'Xem kết quả',
+              text: 'Phân tích với AI',
+              onPress: () => {
+                // Navigate to AI Task Selection screen with imported tab selected
+                router.push('/screens/Reports/AITaskSelectionScreen?tab=imported');
+              },
+            },
+            {
+              text: 'Xem chi tiết',
               onPress: () => router.push(`/screens/Schedule/ImportResultScreen?id=${response.data.id}`),
             },
             {
-              text: 'OK',
+              text: 'Tạo nhiệm vụ khác',
               onPress: () => {
                 setFile(null);
                 setTextContent('');
@@ -729,26 +785,35 @@ export default function CreateTaskScreen() {
   const renderRecentImports = () => (
     <Card style={styles.section}>
       <Text style={styles.sectionTitle}>Nhập khẩu gần đây</Text>
-      {recentImports.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={styles.recentImportCard}
-          onPress={() => router.push(`/schedule/import/${item.id}`)}
-        >
-          <View style={styles.importHeader}>
-            <Text style={styles.importId}>Nhập file #{item.id}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                {item.status}
-              </Text>
+      {recentImports.length === 0 ? (
+        <Text style={styles.noImportsText}>Chưa có nhập khẩu nào</Text>
+      ) : (
+        recentImports.map((item: any) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.recentImportCard}
+            onPress={() => router.push(`/screens/Schedule/ImportResultScreen?id=${item.id}`)}
+          >
+            <View style={styles.importHeader}>
+              <Text style={styles.importId}>Nhập file #{item.id}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                  {item.status}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.importType}>{item.import_type} • {item.source_type}</Text>
-          <Text style={styles.importStats}>
-            {item.total_entries} mục nhập • {item.success_entries} thành công
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text style={styles.importType}>
+              {item.import_type} • {item.source_type}
+              {item.original_filename && ` • ${item.original_filename}`}
+            </Text>
+            <Text style={styles.importStats}>
+              {item.total_records_found || item.total_entries} bản ghi • 
+              {item.successfully_processed || item.success_entries || 0} thành công
+              {item.ai_confidence_score && ` • Độ tin cậy AI: ${(parseFloat(item.ai_confidence_score) * 100).toFixed(0)}%`}
+            </Text>
+          </TouchableOpacity>
+        ))
+      )}
     </Card>
   );
 
@@ -1224,6 +1289,13 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.text.secondary,
     fontSize: 11,
+  },
+  noImportsText: {
+    ...Typography.body2,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    padding: 16,
+    fontSize: 13,
   },
   modalContainer: {
     flex: 1,

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,13 +15,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Vibration
+  Vibration,
+  View
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
-import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
 import { NotificationAPI } from '../../api/notifications.api';
+import { ScheduleImportNewAPI } from '../../api/schedule-import-new.api';
+import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
+import { CSVTaskAnalysisAPI, type CSVAnalysisRequest } from '../../api/csv-task-analysis.api';
 import { Colors, Typography } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -83,7 +85,7 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect, onDelete, isDele
   };
 
   const getSourceLabel = (source: string) => {
-    return source === 'manual' ? 'Thủ công' : 'Nhập khẩu';
+    return source === 'manual' ? 'Thủ công' : 'CSV Import';
   };
 
   const getPriorityColor = (priority: number) => {
@@ -156,6 +158,30 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect, onDelete, isDele
         </Text>
       )}
 
+      {/* Show lock/analysis status for CSV tasks */}
+      {task.source === 'imported' && task.metadata && (
+        <View style={styles.statusIndicator}>
+          {task.metadata.is_locked && (
+            <View style={styles.lockedBadge}>
+              <Ionicons name="lock-closed" size={12} color="#f39c12" />
+              <Text style={styles.lockedText}>Đang xử lý</Text>
+            </View>
+          )}
+          {task.metadata.analysis_status === 'completed' && (
+            <View style={styles.completedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#27ae60" />
+              <Text style={styles.completedText}>Đã phân tích</Text>
+            </View>
+          )}
+          {task.metadata.analysis_status === 'failed' && (
+            <View style={styles.failedBadge}>
+              <Ionicons name="alert-circle" size={12} color="#e74c3c" />
+              <Text style={styles.failedText}>Lỗi</Text>
+            </View>
+          )}
+        </View>
+      )}
+
       <View style={styles.taskDetails}>
         <View style={styles.taskDetailRow}>
           <Ionicons name="calendar-outline" size={14} color={Colors.text.secondary} />
@@ -196,6 +222,7 @@ const SelectableTaskCard = ({ task, isSelected, onToggleSelect, onDelete, isDele
 
 export default function AITaskSelectionScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tasks, setTasks] = useState<SelectableTask[]>([]);
@@ -214,7 +241,70 @@ export default function AITaskSelectionScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
   const [deletingTasks, setDeletingTasks] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'all' | 'manual' | 'imported'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'manual' | 'imported'>(
+    (params.tab as 'all' | 'manual' | 'imported') || 'all'
+  );
+  const [csvAnalysisStatus, setCSVAnalysisStatus] = useState<any>(null);
+
+  // Helper function to convert Vietnamese time format to 24h format
+  const convertVietnameseTime = (timeStr: string, context?: { isAfternoon?: boolean }): string => {
+    if (!timeStr) return '09:00';
+    
+    // Remove extra spaces and normalize
+    const normalized = timeStr.trim().toLowerCase();
+    
+    // Extract hours and minutes
+    const match = normalized.match(/(\d+)\s*(giờ|h)?\s*(\d+)?\s*(phút|p)?/);
+    if (!match) return '09:00';
+    
+    let hours = parseInt(match[1]) || 0;
+    let minutes = parseInt(match[3]) || 0;
+    
+    // Smart PM detection for Vietnamese context
+    // School classes typically run 7AM-5PM
+    if (hours <= 6 && normalized.includes('giờ')) {
+      // Times like 1-6 giờ are likely PM in school context
+      if (hours >= 1 && hours <= 5) {
+        hours += 12; // Convert to 13:00-17:00
+      }
+    } else if (hours === 2 && minutes > 0) {
+      // "2 giờ 15 phút" in afternoon context is 14:15
+      hours = 14;
+    }
+    
+    // If context suggests afternoon and hour is ambiguous
+    if (context?.isAfternoon && hours < 12 && hours > 0 && hours <= 6) {
+      hours += 12;
+    }
+    
+    // Format as HH:MM
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to calculate duration in minutes
+  const calculateDurationMinutes = (startDateTime: string, endDateTime: string): number => {
+    try {
+      const start = new Date(startDateTime);
+      const end = new Date(endDateTime);
+      const diffMs = end.getTime() - start.getTime();
+      return Math.max(30, Math.round(diffMs / (1000 * 60))); // Minimum 30 minutes
+    } catch {
+      return 60; // Default to 60 minutes
+    }
+  };
+
+  // Helper function to parse date from DD/MM/YYYY format
+  const parseVietnameseDate = (dateStr: string): string => {
+    if (!dateStr) return new Date().toISOString().split('T')[0];
+    
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return new Date().toISOString().split('T')[0];
+  };
 
   const sourceOptions = [
     { label: 'Tất cả', value: 'all' },
@@ -240,35 +330,126 @@ export default function AITaskSelectionScreen() {
         // Load all tasks regardless of date for AI analysis
       };
 
-      // Fetch all tasks (manual + imported) in parallel
-      const [taskListResponse, importedTasksResponse] = await Promise.all([
-        TaskSelectionAPI.getUserTaskList(user.id, filters),
-        TaskSelectionAPI.getImportedTasks(user.id).catch(() => ({ data: [] }))
+      // Fetch all tasks, imports and entries in parallel
+      const [taskListResponse, importsResponse] = await Promise.all([
+        TaskSelectionAPI.getUserTaskList(user.id, filters).catch(() => ({ 
+          status: 'error', 
+          data: { tasks: [], summary: { total_tasks: 0, manual_tasks: 0, imported_tasks: 0, selectable_tasks: 0 } } 
+        })),
+        ScheduleImportNewAPI.getImports(user.id).catch(() => ({ success: false, data: [] }))
       ]);
 
+      let allTasks: SelectableTask[] = [];
+      let importedTasks: SelectableTask[] = [];
+
+      // Handle manual tasks from TaskSelectionAPI
       if (taskListResponse.status === 'success' && taskListResponse.data) {
-        const allTasks = taskListResponse.data.tasks;
-        
-        // Add imported tasks if available
-        if (importedTasksResponse?.data?.length > 0) {
-          console.log('📥 Found imported tasks:', importedTasksResponse.data.length);
-          // Merge imported tasks if not already included
-          // The API might already include them, so check for duplicates
-        }
-        
-        console.log('📋 Total tasks loaded:', allTasks.length);
-        console.log('📋 Task breakdown:');
-        console.log('  Manual tasks:', allTasks.filter(t => t.source === 'manual').length);
-        console.log('  Imported tasks:', allTasks.filter(t => t.source === 'imported').length);
-        
-        setTasks(allTasks);
-        filterTasksByTab(allTasks, activeTab);
-        setSummary(taskListResponse.data.summary);
-        
-        console.log('✅ Task list loaded successfully');
-      } else {
-        throw new Error(taskListResponse.message || 'Failed to load tasks');
+        allTasks = taskListResponse.data.tasks;
       }
+
+      // Handle CSV imported tasks from ScheduleImportNewAPI
+      if (importsResponse.success && importsResponse.data.length > 0) {
+        console.log('📥 Found schedule imports:', importsResponse.data.length);
+        
+        // Process each import and its entries
+        for (const scheduleImport of importsResponse.data) {
+          if (scheduleImport.user_id === user.id && scheduleImport.total_entries > 0) {
+            try {
+              // Fetch entries for this import - pass both import ID and user ID
+              const entriesResponse = await ScheduleImportNewAPI.getImportEntries(scheduleImport.id, user.id);
+              
+              if (entriesResponse.success && entriesResponse.data) {
+                // Convert schedule entries to SelectableTask format
+                const tasksFromImport = entriesResponse.data.map((entry: any) => {
+                  // Parse the data to create task
+                  const parsedData = entry.parsed_data || {};
+                  const originalText = entry.original_text || '';
+                  
+                  // Generate dates from parsed data
+                  const dateStr = parsedData.start_date || new Date().toISOString().split('T')[0];
+                  const startTimeStr = parsedData.start_time || '09:00';
+                  const endTimeStr = parsedData.end_time || '10:00';
+                  
+                  // Determine if it's an afternoon class based on start time
+                  const startHour = parseInt(startTimeStr.match(/(\d+)/)?.[1] || '9');
+                  const isAfternoonContext = startHour >= 13 || (startHour >= 1 && startHour <= 5 && startTimeStr.includes('giờ'));
+                  
+                  // Create full datetime strings with context
+                  const startDateTime = `${dateStr}T${convertVietnameseTime(startTimeStr, { isAfternoon: isAfternoonContext })}:00`;
+                  const endDateTime = `${dateStr}T${convertVietnameseTime(endTimeStr, { isAfternoon: isAfternoonContext })}:00`;
+                  
+                  // Check if task is available for analysis and not locked
+                  // CSV entries are available if they're valid and not converted
+                  const isAvailableForAnalysis = entry.validation_status === 'valid' && !entry.is_converted;
+                  const isLocked = entry.is_converted;
+                  const analysisStatus = entry.is_converted ? 'completed' : 'pending';
+                  
+                  const task: SelectableTask = {
+                    task_id: `import_${scheduleImport.id}_entry_${entry.id}`,
+                    source: 'imported',
+                    source_id: entry.id,
+                    title: parsedData.title || originalText.substring(0, 50) || `Entry ${entry.id}`,
+                    description: parsedData.description || originalText,
+                    start_datetime: startDateTime,
+                    end_datetime: endDateTime,
+                    location: parsedData.location || '',
+                    status: entry.is_converted ? 'scheduled' : 'pending',
+                    priority: parseInt(parsedData.priority || '3'),
+                    completion_percentage: 0,
+                    category: parsedData.category || null,
+                    duration_minutes: calculateDurationMinutes(startDateTime, endDateTime),
+                    is_selectable: isAvailableForAnalysis && !isLocked && analysisStatus === 'pending',
+                    created_at: entry.created_at,
+                    metadata: {
+                      source_type: 'csv',
+                      original_text: originalText,
+                      ai_confidence: entry.ai_confidence || 0.75,
+                      import_id: scheduleImport.id,
+                      entry_id: entry.id,
+                      validation_status: entry.validation_status,
+                      is_locked: isLocked,
+                      analysis_status: analysisStatus,
+                      is_available_for_analysis: isAvailableForAnalysis
+                    }
+                  };
+                  
+                  return task;
+                });
+                
+                importedTasks = [...importedTasks, ...tasksFromImport];
+                console.log(`✅ Processed ${tasksFromImport.length} tasks from import #${scheduleImport.id}`);
+              }
+            } catch (error) {
+              console.error(`Error processing import #${scheduleImport.id}:`, error);
+            }
+          }
+        }
+      }
+
+      // Merge all tasks (remove duplicates by task_id)
+      const taskMap = new Map<string, SelectableTask>();
+      [...allTasks, ...importedTasks].forEach(task => {
+        taskMap.set(task.task_id, task);
+      });
+      const mergedTasks = Array.from(taskMap.values());
+      
+      console.log('📋 Total tasks loaded:', mergedTasks.length);
+      console.log('📋 Task breakdown:');
+      console.log('  Manual tasks:', mergedTasks.filter(t => t.source === 'manual').length);
+      console.log('  Imported tasks:', mergedTasks.filter(t => t.source === 'imported').length);
+      
+      setTasks(mergedTasks);
+      filterTasksByTab(mergedTasks, activeTab);
+      
+      // Update summary
+      setSummary({
+        total_tasks: mergedTasks.length,
+        manual_tasks: mergedTasks.filter(t => t.source === 'manual').length,
+        imported_tasks: mergedTasks.filter(t => t.source === 'imported').length,
+        selectable_tasks: mergedTasks.filter(t => t.is_selectable).length
+      });
+      
+      console.log('✅ Task list loaded successfully');
     } catch (error) {
       console.error('❌ Error loading task list:', error);
       setError('Không thể tải danh sách nhiệm vụ. Vui lòng thử lại.');
@@ -399,6 +580,103 @@ export default function AITaskSelectionScreen() {
       setSelectedTasks(new Set());
     } else {
       setSelectedTasks(new Set(selectableTasks.map(task => task.task_id)));
+    }
+  };
+
+  const handleCSVAnalysis = async () => {
+    // Handle CSV task analysis separately
+    const csvTasks = Array.from(selectedTasks)
+      .map(id => filteredTasks.find(t => t.task_id === id))
+      .filter(task => task?.source === 'imported');
+    
+    if (csvTasks.length === 0) {
+      return handleAIAnalysis();
+    }
+
+    setAiLoading(true);
+    try {
+      // Extract entry IDs from CSV tasks
+      const entryIds = csvTasks
+        .map(task => task?.metadata?.entry_id)
+        .filter((id): id is number => id !== undefined);
+      
+      const csvAnalysisRequest: CSVAnalysisRequest = {
+        user_id: user!.id,
+        entry_ids: entryIds,
+        analysis_type: 'both',
+        options: {
+          language: 'vietnamese',
+          optimize_schedule: true,
+          detect_conflicts: true
+        }
+      };
+
+      console.log('🤖 Submitting CSV tasks for analysis:', csvAnalysisRequest);
+      
+      const response = await CSVTaskAnalysisAPI.analyzeCSVTasks(csvAnalysisRequest);
+      
+      if (response.success) {
+        const analysisId = response.data.analysis_id;
+        
+        Alert.alert(
+          '🤖 Phân tích CSV đã bắt đầu!',
+          `${response.data.entries_submitted} nhiệm vụ đã được gửi để phân tích.\n` +
+          `${response.data.entries_locked} nhiệm vụ đã được khóa.\n` +
+          `${response.data.entries_skipped} nhiệm vụ đã bỏ qua.\n\n` +
+          `ID phân tích: ${analysisId}`,
+          [
+            {
+              text: 'Xem kết quả',
+              onPress: async () => {
+                // Poll for results
+                setTimeout(async () => {
+                  try {
+                    const results = await CSVTaskAnalysisAPI.getAnalysisResults(analysisId);
+                    console.log('Analysis results:', results);
+                    // Process and display results
+                    setAiResult(results);
+                    setShowAIModal(true);
+                  } catch (error) {
+                    console.error('Error fetching results:', error);
+                  }
+                }, 3000);
+              }
+            },
+            { text: 'OK' }
+          ]
+        );
+        
+        // Refresh task list to update lock status
+        await loadTasks();
+      }
+    } catch (error: any) {
+      console.error('CSV Analysis error:', error);
+      
+      // Better error handling
+      let errorMessage = 'Không thể phân tích tác vụ CSV';
+      
+      if (error.response?.status === 500) {
+        errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'API không tìm thấy. Vui lòng kiểm tra cấu hình.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Lỗi phân tích CSV', errorMessage, [
+        {
+          text: 'Thử lại',
+          onPress: () => handleCSVAnalysis()
+        },
+        {
+          text: 'Hủy',
+          style: 'cancel'
+        }
+      ]);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -570,7 +848,33 @@ export default function AITaskSelectionScreen() {
 
   useEffect(() => {
     loadTasks();
+    // Check CSV analysis status if on imported tab
+    if (activeTab === 'imported' && user?.id) {
+      checkCSVAnalysisStatus();
+    }
   }, [loadTasks]);
+
+  // Auto-refresh when navigating from CSV import
+  useEffect(() => {
+    if (params.tab === 'imported' && !loading) {
+      // Slight delay to ensure navigation has completed
+      setTimeout(() => {
+        handleRefresh();
+      }, 500);
+    }
+  }, [params.tab]);
+
+  const checkCSVAnalysisStatus = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const status = await CSVTaskAnalysisAPI.getAnalysisStatus(user.id);
+      setCSVAnalysisStatus(status);
+      console.log('CSV Analysis Status:', status);
+    } catch (error) {
+      console.error('Error checking CSV analysis status:', error);
+    }
+  };
 
   useEffect(() => {
     filterTasksByTab(tasks, activeTab);
@@ -579,6 +883,61 @@ export default function AITaskSelectionScreen() {
   const handleTabChange = (tab: 'all' | 'manual' | 'imported') => {
     setActiveTab(tab);
     filterTasksByTab(tasks, tab);
+    
+    // Check CSV analysis status when switching to imported tab
+    if (tab === 'imported' && user?.id) {
+      checkCSVAnalysisStatus();
+    }
+  };
+
+  const handleBatchAnalyze = async () => {
+    if (!user?.id) return;
+    
+    // Get unique import IDs from selected tasks
+    const importIds = Array.from(new Set(
+      Array.from(selectedTasks)
+        .map(id => filteredTasks.find(t => t.task_id === id))
+        .filter(task => task?.source === 'imported' && task?.metadata?.import_id)
+        .map(task => task!.metadata.import_id as number)
+    ));
+    
+    if (importIds.length === 0) {
+      Alert.alert('Thông báo', 'Vui lòng chọn các nhiệm vụ CSV để phân tích hàng loạt');
+      return;
+    }
+    
+    setAiLoading(true);
+    try {
+      const response = await CSVTaskAnalysisAPI.batchAnalyze({
+        user_id: user.id,
+        import_ids: importIds,
+        analysis_type: 'both',
+        skip_locked: true
+      });
+      
+      if (response.success) {
+        Alert.alert(
+          '🚀 Phân tích hàng loạt',
+          `Đã gửi ${response.data.entries_submitted} nhiệm vụ từ ${importIds.length} file nhập khẩu để phân tích.\\n` +
+          `ID phân tích: ${response.data.analysis_id}`,
+          [
+            { 
+              text: 'Xem tiến độ',
+              onPress: () => checkCSVAnalysisStatus()
+            },
+            { text: 'OK' }
+          ]
+        );
+        
+        // Refresh task list
+        await loadTasks();
+      }
+    } catch (error) {
+      console.error('Batch analyze error:', error);
+      Alert.alert('Lỗi', 'Không thể thực hiện phân tích hàng loạt');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const renderTaskItem = ({ item }: { item: SelectableTask }) => (
@@ -775,7 +1134,7 @@ export default function AITaskSelectionScreen() {
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryNumber}>{filteredTasks.length}</Text>
-          <Text style={styles.summaryLabel}>Hiển thị</Text>
+          <Text style={styles.summaryLabel}>Tổng số</Text>
         </View>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryNumber}>{selectedTasks.size}</Text>
@@ -786,6 +1145,37 @@ export default function AITaskSelectionScreen() {
           <Text style={styles.summaryLabel}>Có thể chọn</Text>
         </View>
       </View>
+
+      {/* Show CSV analysis status when on imported tab */}
+      {activeTab === 'imported' && csvAnalysisStatus && (
+        <View style={styles.csvStatusContainer}>
+          <Text style={styles.csvStatusTitle}>Trạng thái phân tích CSV</Text>
+          <View style={styles.csvStatusGrid}>
+            <View style={styles.csvStatusItem}>
+              <Text style={styles.csvStatusNumber}>{csvAnalysisStatus.available_for_analysis || 0}</Text>
+              <Text style={styles.csvStatusLabel}>Có thể phân tích</Text>
+            </View>
+            <View style={styles.csvStatusItem}>
+              <Text style={[styles.csvStatusNumber, { color: '#f39c12' }]}>
+                {csvAnalysisStatus.in_progress || 0}
+              </Text>
+              <Text style={styles.csvStatusLabel}>Đang xử lý</Text>
+            </View>
+            <View style={styles.csvStatusItem}>
+              <Text style={[styles.csvStatusNumber, { color: '#27ae60' }]}>
+                {csvAnalysisStatus.completed || 0}
+              </Text>
+              <Text style={styles.csvStatusLabel}>Hoàn thành</Text>
+            </View>
+            <View style={styles.csvStatusItem}>
+              <Text style={[styles.csvStatusNumber, { color: '#e74c3c' }]}>
+                {csvAnalysisStatus.locked || 0}
+              </Text>
+              <Text style={styles.csvStatusLabel}>Đã khóa</Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       <View style={styles.controlsContainer}>
         <View style={styles.searchContainer}>
@@ -840,7 +1230,7 @@ export default function AITaskSelectionScreen() {
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[styles.aiButton, aiLoading && styles.disabledButton]}
-            onPress={handleAIAnalysis}
+            onPress={handleCSVAnalysis}
             disabled={aiLoading}
           >
             {aiLoading ? (
@@ -1314,5 +1704,84 @@ const styles = StyleSheet.create({
   },
   deletingTaskCard: {
     opacity: 0.6,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f39c1220',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  lockedText: {
+    fontSize: 11,
+    color: '#f39c12',
+    fontWeight: '600',
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#27ae6020',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  completedText: {
+    fontSize: 11,
+    color: '#27ae60',
+    fontWeight: '600',
+  },
+  failedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e74c3c20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  failedText: {
+    fontSize: 11,
+    color: '#e74c3c',
+    fontWeight: '600',
+  },
+  csvStatusContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  csvStatusTitle: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  csvStatusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  csvStatusItem: {
+    alignItems: 'center',
+  },
+  csvStatusNumber: {
+    ...Typography.h4,
+    color: Colors.text.primary,
+    fontWeight: 'bold',
+  },
+  csvStatusLabel: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    fontSize: 10,
+    marginTop: 2,
   },
 });

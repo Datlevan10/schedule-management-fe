@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { DashboardAPI, type DashboardStats } from '../../api/dashboard.api';
 import { ScheduleTemplateAPI, type ScheduleImportTemplate } from '../../api/schedule-template.api';
 import { Card } from '../../components/common';
 import { Colors } from '../../constants';
@@ -53,10 +54,46 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProfession, setSelectedProfession] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    active_tasks: 0,
+    reminders: 0,
+    productivity_percentage: '0%',
+    productivity_score: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
+    if (user?.id) {
+      fetchDashboardStats();
+    }
+  }, [user?.id]);
+
+  const fetchDashboardStats = async () => {
+    if (!user?.id) return;
+
+    try {
+      setStatsLoading(true);
+      const response = await DashboardAPI.getLatestPriorities(user.id);
+
+      if (response.status === 'success' && response.data?.dashboard_stats) {
+        setDashboardStats(response.data.dashboard_stats);
+        console.log('📊 Dashboard stats loaded:', response.data.dashboard_stats);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      // Keep default values on error
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const getProductivityColor = (score: number): string => {
+    if (score >= 80) return '#10B981'; // Green - Excellent
+    if (score >= 60) return '#F59E0B'; // Yellow - Good
+    if (score >= 40) return '#FB923C'; // Orange - Fair
+    return '#EF4444'; // Red - Needs improvement
+  };
 
   const fetchTemplates = async (isRefresh = false) => {
     try {
@@ -75,9 +112,13 @@ export default function HomeScreen() {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchTemplates(true);
+    await Promise.all([
+      fetchTemplates(true),
+      user?.id ? fetchDashboardStats() : Promise.resolve()
+    ]);
+    setRefreshing(false);
   };
 
   const professions = ['All', ...new Set(templates.map(t => t.profession?.display_name || 'Other'))];
@@ -193,18 +234,82 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.quickStats}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>3</Text>
-          <Text style={styles.statLabel}>Nhiệm vụ đang hoạt động</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>2</Text>
-          <Text style={styles.statLabel}>Lời nhắc nhở</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>85%</Text>
-          <Text style={styles.statLabel}>Năng suất</Text>
-        </Card>
+        <TouchableOpacity
+          style={styles.statCardWrapper}
+          onPress={() => router.push('/profile/ai-task-selection')}
+          activeOpacity={0.7}
+        >
+          <Card style={styles.statCard}>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Text style={styles.statNumber}>{dashboardStats.active_tasks}</Text>
+                {dashboardStats.active_tasks > 0 && (
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statBadgeText}>Đang chạy</Text>
+                  </View>
+                )}
+              </>
+            )}
+            <Text style={styles.statLabel}>Nhiệm vụ</Text>
+          </Card>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statCardWrapper}
+          onPress={() => router.push('/screens/Reminder/NotifyScreen')}
+          activeOpacity={0.7}
+        >
+          <Card style={styles.statCard}>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Text style={styles.statNumber}>{dashboardStats.reminders}</Text>
+                {dashboardStats.reminders > 0 && (
+                  <View style={[styles.statBadge, { backgroundColor: '#F59E0B20' }]}>
+                    <Text style={[styles.statBadgeText, { color: '#F59E0B' }]}>Cần chú ý</Text>
+                  </View>
+                )}
+              </>
+            )}
+            <Text style={styles.statLabel}>Lời nhắc nhở</Text>
+          </Card>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.statCardWrapper}
+          onPress={() => router.push('/profile/productivity')}
+          activeOpacity={0.7}
+        >
+          <Card style={styles.statCard}>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Text style={[
+                  styles.statNumber,
+                  { color: getProductivityColor(dashboardStats.productivity_score) }
+                ]}>
+                  {dashboardStats.productivity_percentage}
+                </Text>
+                <View style={[
+                  styles.statBadge,
+                  { backgroundColor: getProductivityColor(dashboardStats.productivity_score) + '20' }
+                ]}>
+                  <Text style={[
+                    styles.statBadgeText,
+                    { color: getProductivityColor(dashboardStats.productivity_score) }
+                  ]}>
+                    AI Score
+                  </Text>
+                </View>
+              </>
+            )}
+            <Text style={styles.statLabel}>Năng suất</Text>
+          </Card>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -311,12 +416,14 @@ const styles = StyleSheet.create({
   },
   quickStats: {
     flexDirection: 'row',
-    paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,
+    paddingHorizontal: isSmallDevice() ? spacing.xs : spacing.lg,
     marginBottom: verticalScale(24),
     gap: scale(12),
   },
-  statCard: {
+  statCardWrapper: {
     flex: 1,
+  },
+  statCard: {
     alignItems: 'center',
     paddingVertical: verticalScale(16),
   },
@@ -329,6 +436,18 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize.sm,
     color: Colors.text.secondary,
     marginTop: verticalScale(4),
+  },
+  statBadge: {
+    marginTop: verticalScale(4),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
+    backgroundColor: Colors.primary + '20',
+  },
+  statBadgeText: {
+    fontSize: responsiveFontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   section: {
     paddingHorizontal: isSmallDevice() ? spacing.md : spacing.lg,

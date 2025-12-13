@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import api from './index';
 
 export interface ScheduleImportTemplate {
@@ -208,8 +209,10 @@ export const ScheduleImportNewAPI = {
       let requestData: any;
 
       if (data.import_type === 'file_upload' && data.file) {
-        // File upload using FormData
+        // File upload using FormData for React Native
         const formData = new FormData();
+        
+        // Add form fields
         formData.append('import_type', data.import_type);
         formData.append('source_type', data.source_type);
         
@@ -220,17 +223,80 @@ export const ScheduleImportNewAPI = {
         
         // In React Native, file needs to be in a specific format
         const file = data.file as any;
-        formData.append('file', {
+        
+        console.log('🔍 Original file object received:', {
+          name: file.name,
           uri: file.uri,
-          type: file.type || 'application/octet-stream',
-          name: file.name || 'upload.csv',
-        } as any);
+          type: file.type,
+          mimeType: file.mimeType,
+          size: file.size
+        });
+        
+        // Try to read file content for debugging
+        try {
+          const response = await fetch(file.uri);
+          const fileContent = await response.text();
+          console.log('📋 API Layer - File content preview (first 500 chars):');
+          console.log(fileContent.substring(0, 500));
+          console.log('📋 File content length:', fileContent.length, 'characters');
+          
+          // Check if this is sample data
+          if (fileContent.includes('Sample ngay') || fileContent.includes('Sample lop')) {
+            console.error('❌ ERROR: File contains sample data at API layer!');
+            console.error('This means the file picker is returning the wrong file.');
+          }
+        } catch (readError) {
+          console.log('Could not read file at API layer:', readError);
+        }
+        
+        // Ensure we have the correct MIME type
+        let mimeType = file.mimeType || file.type;
+        if (!mimeType || mimeType === 'application/octet-stream') {
+          // Set proper MIME type based on file extension
+          if (file.name?.toLowerCase().endsWith('.csv')) {
+            mimeType = 'text/csv';
+          } else if (file.name?.toLowerCase().endsWith('.xlsx')) {
+            mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          } else if (file.name?.toLowerCase().endsWith('.xls')) {
+            mimeType = 'application/vnd.ms-excel';
+          } else if (file.name?.toLowerCase().endsWith('.txt')) {
+            mimeType = 'text/plain';
+          }
+        }
+        
+        // Create file object for React Native
+        // Platform-specific handling
+        const fileToUpload = {
+          uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
+          type: mimeType || 'text/csv',
+          name: file.name || `import_${Date.now()}.csv`,
+        };
+        
+        // Append file to FormData - cast to any to bypass TypeScript
+        formData.append('file', fileToUpload as any);
+        
+        console.log('📤 Uploading CSV file:', {
+          name: fileToUpload.name,
+          type: fileToUpload.type,
+          uri: fileToUpload.uri,
+          user_id: data.user_id,
+          import_type: data.import_type,
+          source_type: data.source_type
+        });
 
+        // Make the request with proper headers for multipart/form-data
         const response = await api.post<ScheduleImportResponse>('/schedule-imports', formData, {
           headers: {
+            'Accept': 'application/json',
             'Content-Type': 'multipart/form-data',
           },
+          transformRequest: (data) => {
+            // Return FormData as-is, don't let axios transform it
+            return data;
+          },
         });
+        
+        console.log('📥 Import response received:', response.data);
         return response.data;
       } else {
         // Text/manual input using JSON
@@ -251,9 +317,10 @@ export const ScheduleImportNewAPI = {
   },
 
   // Management APIs
-  getImports: async (): Promise<ScheduleImportListResponse> => {
+  getImports: async (userId?: number): Promise<ScheduleImportListResponse> => {
     try {
-      const response = await api.get<ScheduleImportListResponse>('/schedule-imports');
+      const url = userId ? `/schedule-imports?user_id=${userId}` : '/schedule-imports';
+      const response = await api.get<ScheduleImportListResponse>(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching imports:', error);
@@ -313,9 +380,12 @@ export const ScheduleImportNewAPI = {
   },
 
   // Entry Management
-  getEntries: async (importId: number): Promise<ScheduleEntriesResponse> => {
+  getEntries: async (importId: number, userId?: number): Promise<ScheduleEntriesResponse> => {
     try {
-      const response = await api.get<ScheduleEntriesResponse>(`/schedule-imports/${importId}/entries`);
+      const url = userId 
+        ? `/schedule-imports/${importId}/entries?user_id=${userId}`
+        : `/schedule-imports/${importId}/entries`;
+      const response = await api.get<ScheduleEntriesResponse>(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching entries:', error);
@@ -323,9 +393,12 @@ export const ScheduleImportNewAPI = {
     }
   },
   
-  getImportEntries: async (importId: number): Promise<ScheduleEntriesResponse> => {
+  getImportEntries: async (importId: number, userId?: number): Promise<ScheduleEntriesResponse> => {
     try {
-      const response = await api.get<ScheduleEntriesResponse>(`/schedule-imports/${importId}/entries`);
+      const url = userId 
+        ? `/schedule-imports/${importId}/entries?user_id=${userId}`
+        : `/schedule-imports/${importId}/entries`;
+      const response = await api.get<ScheduleEntriesResponse>(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching import entries:', error);

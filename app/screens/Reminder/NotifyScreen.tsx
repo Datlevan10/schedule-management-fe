@@ -382,12 +382,12 @@ export default function NotifyScreen() {
         <Card style={styles.settingsCard}>
           <TouchableOpacity style={styles.settingItem}>
             <Text style={styles.settingText}>Âm thanh thông báo</Text>
-            <Text style={styles.settingValue}>Default</Text>
+            <Text style={styles.settingValue}>Mặc định</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingItem}>
             <Text style={styles.settingText}>Rung động</Text>
-            <Text style={styles.settingValue}>On</Text>
+            <Text style={styles.settingValue}>Bật</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingItem}>
