@@ -44,11 +44,65 @@ export interface TaskPriorityResponse {
   status: "success" | "error";
   message: string;
   data: {
-    analysis_id: number;
-    analysis_date: string;
-    highest_priority_task: TaskPriorityTask;
-    priority_ranking: (TaskPriorityTask & { rank: number })[];
-    task_summary: {
+    user_id?: string;
+    manual_tasks?: {
+      analysis_id: number;
+      analysis_date: string;
+      confidence_score: string;
+      tasks: any[];
+      priority_ranking: any[];
+      task_count: number;
+    };
+    csv_tasks?: {
+      analysis_id: number;
+      import_id: number;
+      analysis_date: string;
+      confidence_score: string;
+      tasks: any[];
+      priority_ranking: any[];
+      task_count: number;
+    };
+    combined_priorities?: Array<{
+      rank: number;
+      task_id: string;
+      title: string;
+      priority: number;
+      source: "manual" | "csv";
+      urgency_level: "critical" | "high" | "medium" | "low";
+      start_datetime: string;
+      location?: string;
+    }>;
+    summary?: {
+      has_manual_analysis: boolean;
+      has_csv_analysis: boolean;
+      total_tasks: number;
+      highest_priority_task?: {
+        task_id: string;
+        title: string;
+        priority: number;
+        source: "manual" | "csv";
+        urgency_level: "critical" | "high" | "medium" | "low";
+        notification_message?: string;
+      };
+      priority_distribution: Record<string, number>;
+      latest_manual_analysis?: string;
+      latest_csv_analysis?: string;
+    };
+    dashboard_stats?: {
+      active_tasks: number;
+      reminders: number;
+      productivity_percentage: string;
+      productivity_score: number;
+      tasks_needing_attention?: number;
+      completed_tasks?: number;
+      total_analyzed_tasks?: number;
+    };
+    // Keep old structure fields as optional for backward compatibility
+    analysis_id?: number;
+    analysis_date?: string;
+    highest_priority_task?: TaskPriorityTask;
+    priority_ranking?: (TaskPriorityTask & { rank: number })[];
+    task_summary?: {
       total_tasks: number;
       priority_distribution: Record<string, number>;
       urgency_breakdown: Record<string, number>;
@@ -57,7 +111,7 @@ export interface TaskPriorityResponse {
         latest: string;
       };
     };
-    notifications_for_frontend: {
+    notifications_for_frontend?: {
       type: "task_priority";
       priority: "critical" | "high" | "medium" | "low";
       title: string;
@@ -76,9 +130,9 @@ export interface TaskPriorityResponse {
         ai_confidence: number;
       };
     }[];
-    ai_recommendations: any[];
-    ai_confidence_score: number;
-    priority_guidelines: Record<string, string>;
+    ai_recommendations?: any[];
+    ai_confidence_score?: number;
+    priority_guidelines?: Record<string, string>;
   };
 }
 
@@ -355,82 +409,100 @@ export const NotificationAPI = {
   ): AINotification[] => {
     const notifications: AINotification[] = [];
 
-    if (!priorityResponse.data.notifications_for_frontend) {
+    // Handle new API structure with combined_priorities
+    if (!priorityResponse.data) {
       return notifications;
     }
 
-    priorityResponse.data.notifications_for_frontend.forEach((notif, index) => {
-      const urgencyToPriority = (
-        urgency: string
-      ): "thấp" | "trung bình" | "cao" | "rất cao" => {
-        switch (urgency) {
-          case "critical":
-            return "rất cao";
-          case "high":
-            return "cao";
-          case "medium":
-            return "trung bình";
-          case "low":
-            return "thấp";
-          default:
-            return "trung bình";
-        }
-      };
+    const data = priorityResponse.data;
+    
+    const urgencyToPriority = (
+      urgency: string
+    ): "thấp" | "trung bình" | "cao" | "rất cao" => {
+      switch (urgency) {
+        case "critical":
+          return "rất cao";
+        case "high":
+          return "cao";
+        case "medium":
+          return "trung bình";
+        case "low":
+          return "thấp";
+        default:
+          return "trung bình";
+      }
+    };
 
-      const getTypeIcon = (urgency: string): string => {
-        switch (urgency) {
-          case "critical":
-            return "🔥";
-          case "high":
-            return "⭐";
-          case "medium":
-            return "📝";
-          case "low":
-            return "📌";
-          default:
-            return "📝";
-        }
-      };
-
-      const getVietnameseTitle = (englishTitle: string, urgencyLevel: string): string => {
-        const priorityNumber = notif.action_data.priority_rank;
-        const taskTitle = englishTitle.replace(/^Task Priority #\d+:\s*/, '');
-        
-        const urgencyText = urgencyLevel === 'critical' ? 'Khẩn cấp' :
-                           urgencyLevel === 'high' ? 'Ưu tiên cao' :
-                           urgencyLevel === 'medium' ? 'Ưu tiên trung bình' :
-                           'Ưu tiên thấp';
-        
-        return `${urgencyText} #${priorityNumber}: ${taskTitle}`;
-      };
-
-      const getVietnameseDescription = (englishMessage: string, urgencyLevel: string): string => {
-        const priorityDescriptions: Record<string, string> = {
-          'critical': 'Khẩn cấp - Cần xử lý ngay lập tức',
-          'high': 'Ưu tiên cao - Nên hoàn thành hôm nay',
-          'medium': 'Ưu tiên trung bình - Hoàn thành trong tuần',
-          'low': 'Ưu tiên thấp - Có thể lên lịch lại'
-        };
-
-        const priority = englishMessage.match(/Priority (\d+)/)?.[1] || '';
-        const description = priorityDescriptions[urgencyLevel] || englishMessage;
-        
-        return priority ? `Mức độ ${priority} - ${description}` : description;
-      };
-
-      notifications.push({
-        id: `priority_${notif.action_data.analysis_id}_${notif.action_data.task_id}`,
-        title: `${getTypeIcon(notif.context.urgency_level)} ${getVietnameseTitle(notif.title, notif.context.urgency_level)}`,
-        description: getVietnameseDescription(notif.message, notif.context.urgency_level),
-        time: formatTimeAgo(notif.scheduled_datetime),
+    const getTypeIcon = (urgency: string): string => {
+      switch (urgency) {
+        case "critical":
+          return "🔥";
+        case "high":
+          return "⭐";
+        case "medium":
+          return "📝";
+        case "low":
+          return "📌";
+        default:
+          return "📝";
+      }
+    };
+    
+    // Create notifications from combined priorities
+    const combinedPriorities = data.combined_priorities || [];
+    combinedPriorities.forEach((task, index) => {
+      const notification: AINotification = {
+        id: `priority_${task.task_id}`,
+        title: `${getTypeIcon(task.urgency_level)} Nhiệm vụ #${task.rank}: ${task.title}`,
+        description: `Mức độ ưu tiên: ${task.priority}\n` +
+                    `Thời gian: ${new Date(task.start_datetime).toLocaleString('vi-VN')}\n` +
+                    `Địa điểm: ${task.location || 'Không xác định'}\n` +
+                    `Nguồn: ${task.source === 'manual' ? 'Thủ công' : 'Nhập từ CSV'}`,
+        time: formatTimeAgo(task.start_datetime),
         type: "priority_task",
         isRead: false,
-        priority: urgencyToPriority(notif.context.urgency_level),
-        analysis_id: notif.action_data.analysis_id,
-        task_id: notif.action_data.task_id,
-        created_at: notif.scheduled_datetime,
-      });
+        priority: urgencyToPriority(task.urgency_level),
+        analysis_id: task.source === 'manual' ? data.manual_tasks?.analysis_id : data.csv_tasks?.analysis_id,
+        task_id: task.task_id,
+        created_at: task.start_datetime,
+      };
+      notifications.push(notification);
     });
+    
+    // Add a summary notification for highest priority task
+    if (data.summary?.highest_priority_task) {
+      const highestTask = data.summary.highest_priority_task;
+      notifications.unshift({
+        id: 'highest_priority_summary',
+        title: `🔥 Nhiệm vụ quan trọng nhất: ${highestTask.title}`,
+        description: `Mức độ ưu tiên: ${highestTask.priority} (${highestTask.urgency_level})\n` +
+                    `Nguồn: ${highestTask.source === 'manual' ? 'Thủ công' : 'CSV'}\n` +
+                    `Tổng số nhiệm vụ đã phân tích: ${data.summary.total_tasks}`,
+        time: formatTimeAgo(new Date().toISOString()),
+        type: "ai_analysis" as const,
+        isRead: false,
+        priority: "rất cao" as const,
+        task_id: highestTask.task_id,
+        created_at: new Date().toISOString(),
+      });
+    }
+    
+    // Add dashboard stats notification
+    if (data.dashboard_stats) {
+      const stats = data.dashboard_stats;
+      notifications.push({
+        id: 'dashboard_stats',
+        title: '📊 Thống kê năng suất',
+        description: `Nhiệm vụ đang hoạt động: ${stats.active_tasks}\n` +
+                    `Nhắc nhở: ${stats.reminders}\n` +
+                    `Điểm năng suất: ${stats.productivity_score}/100`,
+        time: formatTimeAgo(new Date().toISOString()),
+        type: "ai_analysis" as const,
+        isRead: false,
+        priority: "trung bình" as const,
+        created_at: new Date().toISOString(),
+      });
+    }
 
     return notifications;
   },

@@ -53,6 +53,11 @@ export interface CSVAnalysisRequest {
   user_id: number;
   entry_ids: number[];
   analysis_type?: 'parsing' | 'ai' | 'both';
+  target_date?: string;
+  preferences?: {
+    work_hours?: string;
+    break_duration?: number;
+  };
   options?: {
     language?: 'vietnamese' | 'english';
     optimize_schedule?: boolean;
@@ -61,16 +66,21 @@ export interface CSVAnalysisRequest {
 }
 
 export interface CSVAnalysisResponse {
-  success: boolean;
+  status?: 'success' | 'error';
+  success?: boolean;
+  message?: string;
   data: {
-    analysis_id: string;
-    user_id: number;
-    entries_submitted: number;
-    entries_locked: number;
-    entries_skipped: number;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
+    analysis_id: number | string;
+    batch_id?: string;
+    tasks_count?: number;
+    analysis_type?: string;
+    estimated_completion?: string;
+    user_id?: number;
+    entries_submitted?: number;
+    entries_locked?: number;
+    entries_skipped?: number;
+    status?: 'pending' | 'processing' | 'completed' | 'failed';
     estimated_time_seconds?: number;
-    message: string;
   };
 }
 
