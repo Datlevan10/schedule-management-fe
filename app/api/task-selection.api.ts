@@ -22,6 +22,14 @@ export interface SelectableTask {
     source_type?: string;
     original_text?: string;
     ai_confidence?: number;
+    // CSV import related fields
+    import_id?: number;
+    entry_id?: number;
+    validation_status?: string;
+    is_locked?: boolean;
+    analysis_status?: string;
+    is_available_for_analysis?: boolean;
+    [key: string]: any; // Allow additional fields
   };
 }
 
