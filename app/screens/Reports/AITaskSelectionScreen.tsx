@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
-import { CSVTaskAnalysisAPI, type CSVAnalysisRequest } from '../../api/csv-task-analysis.api';
+import { CSVTaskAnalysisAPI } from '../../api/csv-task-analysis.api';
 import { NotificationAPI } from '../../api/notifications.api';
 import { ScheduleImportNewAPI } from '../../api/schedule-import-new.api';
 import { TaskSelectionAPI, type AIAnalysisRequest, type SelectableTask, type TaskListFilters } from '../../api/task-selection.api';
@@ -516,6 +516,9 @@ export default function AITaskSelectionScreen() {
   }, [user?.id, activeTab]);
 
   const filterTasksByTab = (taskList: SelectableTask[], tab: string) => {
+    console.log(`🔍 Filtering tasks by tab: ${tab}`);
+    console.log(`🔍 Total tasks before filter: ${taskList.length}`);
+    
     let filtered = taskList;
 
     if (tab === 'manual') {
@@ -523,6 +526,8 @@ export default function AITaskSelectionScreen() {
     } else if (tab === 'imported') {
       filtered = taskList.filter(task => task.source === 'imported');
     }
+    
+    console.log(`🔍 Tasks after tab filter: ${filtered.length}`);
 
     // Apply search filter if any
     if (searchQuery) {
@@ -530,8 +535,16 @@ export default function AITaskSelectionScreen() {
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      console.log(`🔍 Tasks after search filter: ${filtered.length}`);
     }
 
+    console.log(`🔍 Setting filteredTasks with ${filtered.length} tasks`);
+    console.log(`🔍 First 3 filtered tasks:`, filtered.slice(0, 3).map(t => ({
+      id: t.task_id,
+      title: t.title,
+      source: t.source
+    })));
+    
     setFilteredTasks(filtered);
   };
 
@@ -694,7 +707,7 @@ export default function AITaskSelectionScreen() {
                 // Poll for results
                 setTimeout(async () => {
                   try {
-                    const results = await CSVTaskAnalysisAPI.getAnalysisResults(analysisId);
+                    const results = await CSVTaskAnalysisAPI.getAnalysisResults(String(analysisId));
                     console.log('Analysis results:', results);
                     // Process and display results
                     setAiResult(results);
@@ -1088,17 +1101,19 @@ export default function AITaskSelectionScreen() {
             </View>
 
             {/* Priority Recommendations */}
-            <View style={styles.resultSection}>
-              <Text style={styles.sectionTitle}>🎯 Khuyến nghị ưu tiên</Text>
-              <Text style={styles.sectionText}>
-                • Ưu tiên cao: {aiResult.selected_tasks.find((t: any) =>
-                  t.task_id === analysis.priority_recommendations.high_priority_task)?.title}
-              </Text>
-              <Text style={styles.sectionText}>
-                • Ưu tiên trung bình: {aiResult.selected_tasks.find((t: any) =>
-                  t.task_id === analysis.priority_recommendations.medium_priority_task)?.title}
-              </Text>
-            </View>
+            {analysis.priority_recommendations && (
+              <View style={styles.resultSection}>
+                <Text style={styles.sectionTitle}>🎯 Khuyến nghị ưu tiên</Text>
+                <Text style={styles.sectionText}>
+                  • Ưu tiên cao: {aiResult.selected_tasks?.find((t: any) =>
+                    t.task_id === analysis.priority_recommendations?.high_priority_task)?.title || 'Không có'}
+                </Text>
+                <Text style={styles.sectionText}>
+                  • Ưu tiên trung bình: {aiResult.selected_tasks?.find((t: any) =>
+                    t.task_id === analysis.priority_recommendations?.medium_priority_task)?.title || 'Không có'}
+                </Text>
+              </View>
+            )}
 
             {/* Actionable Improvements */}
             <View style={styles.resultSection}>
@@ -1145,6 +1160,20 @@ export default function AITaskSelectionScreen() {
       </View>
     );
   }
+
+  // Debug logging for FlatList rendering
+  console.log('🎨 Rendering screen with:', {
+    filteredTasksCount: filteredTasks.length,
+    selectedCount: selectedTasks.size,
+    activeTab: activeTab,
+    loading: loading,
+    firstTwoTasks: filteredTasks.slice(0, 2).map(t => ({
+      id: t.task_id,
+      title: t.title,
+      source: t.source,
+      is_selectable: t.is_selectable
+    }))
+  });
 
   return (
     <View style={styles.container}>
@@ -1274,7 +1303,10 @@ export default function AITaskSelectionScreen() {
         renderItem={renderTaskItem}
         keyExtractor={(item) => item.task_id}
         style={styles.taskList}
-        contentContainerStyle={styles.taskListContent}
+        contentContainerStyle={[
+          styles.taskListContent,
+          filteredTasks.length === 0 && { flex: 1 }
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
@@ -1345,13 +1377,15 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   headerTitle: {
-    ...Typography.h2,
+    fontSize: 18,
+    fontWeight: '700',
     color: Colors.text.primary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    ...Typography.body1,
+    fontSize: 12,
     color: Colors.text.secondary,
+    lineHeight: 16,
   },
   historyButton: {
     flexDirection: 'row',
@@ -1364,15 +1398,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
   },
   historyButtonText: {
-    ...Typography.body2,
+    fontSize: 13,
     color: Colors.primary,
     marginLeft: 4,
   },
   summaryContainer: {
     flexDirection: 'row',
     backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
@@ -1381,17 +1415,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryNumber: {
-    ...Typography.h3,
+    fontSize: 18,
+    fontWeight: '700',
     color: Colors.primary,
-    fontSize: 20,
   },
   summaryLabel: {
-    ...Typography.caption,
+    fontSize: 11,
     color: Colors.text.secondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   controlsContainer: {
-    padding: 16,
+    padding: 10,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
@@ -1408,7 +1442,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     marginLeft: 8,
-    ...Typography.body1,
+    fontSize: 14,
     color: Colors.text.primary,
   },
   filterContainer: {
@@ -1424,7 +1458,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   selectAllText: {
-    ...Typography.body2,
+    fontSize: 13,
     color: Colors.primary,
     fontWeight: '600',
   },
@@ -1435,26 +1469,25 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border.light,
   },
   tabScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   tabButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginRight: 8,
-    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 6,
+    borderRadius: 16,
     backgroundColor: Colors.background.secondary,
-    gap: 6,
+    gap: 4,
   },
   activeTab: {
     backgroundColor: Colors.primary,
   },
   tabText: {
-    ...Typography.body2,
+    fontSize: 13,
     color: Colors.text.secondary,
     fontWeight: '500',
-    fontSize: 14,
   },
   activeTabText: {
     color: 'white',
@@ -1492,13 +1525,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   taskListContent: {
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 80,
   },
   taskCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: Colors.border.light,
   },
@@ -1544,9 +1579,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   taskTitle: {
-    ...Typography.h4,
+    fontSize: 15,
+    fontWeight: '600',
     color: Colors.text.primary,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   taskMeta: {
     flexDirection: 'row',
@@ -1562,9 +1598,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sourceText: {
-    ...Typography.caption,
+    fontSize: 11,
     color: Colors.text.secondary,
-    marginLeft: 4,
+    marginLeft: 3,
   },
   priorityTag: {
     paddingHorizontal: 8,
@@ -1572,14 +1608,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   priorityText: {
-    ...Typography.caption,
+    fontSize: 11,
     fontWeight: '600',
   },
   taskDescription: {
-    ...Typography.body2,
+    fontSize: 13,
     color: Colors.text.secondary,
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: 8,
+    lineHeight: 18,
   },
   taskDetails: {
     gap: 6,
@@ -1589,16 +1625,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   taskDetailText: {
-    ...Typography.caption,
+    fontSize: 11,
     color: Colors.text.secondary,
-    marginLeft: 6,
+    marginLeft: 4,
     flex: 1,
   },
   disabledText: {
     opacity: 0.5,
   },
   actionContainer: {
-    padding: 16,
+    padding: 12,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
@@ -1608,15 +1644,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 8,
+    gap: 6,
   },
   disabledButton: {
     opacity: 0.6,
   },
   aiButtonText: {
-    ...Typography.button,
+    fontSize: 15,
+    fontWeight: '600',
     color: 'white',
   },
   emptyContainer: {
@@ -1626,13 +1663,14 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyText: {
-    ...Typography.h4,
+    fontSize: 16,
+    fontWeight: '600',
     color: Colors.text.secondary,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 6,
   },
   emptySubtext: {
-    ...Typography.body2,
+    fontSize: 13,
     color: Colors.text.secondary,
     textAlign: 'center',
   },
