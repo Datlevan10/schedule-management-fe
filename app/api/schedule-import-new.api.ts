@@ -63,15 +63,34 @@ export interface ScheduleImport {
   file_path: string | null;
   original_filename: string | null;
   file_size: number | null;
+  file_size_bytes?: number;
+  file_size_formatted?: string;
+  mime_type?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  total_entries: number;
-  processed_entries: number;
-  success_entries: number;
-  failed_entries: number;
-  ai_processing_status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  ai_processing_feedback: any | null;
-  conversion_status: 'pending' | 'completed' | 'failed';
-  metadata: {
+  processing_started_at?: string;
+  processing_completed_at?: string;
+  processing_duration?: string;
+  total_entries?: number; // Keep for backward compatibility
+  total_records_found: number;
+  processed_entries?: number;
+  successfully_processed: number;
+  success_entries?: number; // Keep for backward compatibility
+  failed_entries?: number;
+  failed_records: number;
+  success_rate: number;
+  error_log: string | null;
+  ai_confidence_score: string;
+  detected_format: string | null;
+  detected_profession: string | null;
+  has_errors: boolean;
+  ai_processing_status?: 'pending' | 'in_progress' | 'completed' | 'failed';
+  ai_processing_feedback?: any | null;
+  conversion_status?: 'pending' | 'completed' | 'failed';
+  created_at: string;
+  updated_at: string;
+  created_at_formatted: string;
+  created_at_human: string;
+  metadata?: {
     created_at: string;
     updated_at: string;
     created_at_human: string;

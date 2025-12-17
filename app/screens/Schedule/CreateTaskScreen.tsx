@@ -301,7 +301,7 @@ export default function CreateTaskScreen() {
           mimeType: selectedFile.mimeType,
           size: selectedFile.size,
         });
-        
+
         // Try to read file content for debugging
         try {
           // For debugging: Try to fetch and log file content
@@ -310,7 +310,7 @@ export default function CreateTaskScreen() {
           console.log('📄 File content preview (first 500 chars):');
           console.log(fileContent.substring(0, 500));
           console.log('📄 File content length:', fileContent.length, 'characters');
-          
+
           // Check if content looks like sample data
           if (fileContent.includes('Sample ngay') || fileContent.includes('Sample lop')) {
             console.warn('⚠️ WARNING: File contains sample data!');
@@ -319,12 +319,12 @@ export default function CreateTaskScreen() {
         } catch (readError) {
           console.log('Could not read file for preview:', readError);
         }
-        
+
         // Validate file
         if (sourceType === 'csv' && !selectedFile.name.toLowerCase().endsWith('.csv')) {
           Alert.alert('Cảnh báo', 'File được chọn có thể không phải là file CSV');
         }
-        
+
         setFile({
           name: selectedFile.name,
           uri: selectedFile.uri,
@@ -383,7 +383,7 @@ export default function CreateTaskScreen() {
         if (sourceType === 'csv' && (!mimeType || mimeType === 'application/octet-stream')) {
           mimeType = 'text/csv';
         }
-        
+
         console.log('📁 File details:', {
           name: file.name,
           uri: file.uri,
@@ -391,7 +391,7 @@ export default function CreateTaskScreen() {
           size: file.size,
           sourceType: sourceType
         });
-        
+
         importData = {
           import_type: 'file_upload',
           source_type: sourceType,
@@ -422,11 +422,11 @@ export default function CreateTaskScreen() {
 
       if (response.success) {
         // Import was successful
-        console.log(`✅ CSV import successful! Found ${response.data.total_entries} records`);
-        
+        console.log(`✅ CSV import successful! Found ${response.data.total_records_found} records`);
+
         Alert.alert(
           'Nhập khẩu thành công',
-          `Đã nhập ${response.data.total_entries} bản ghi từ ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn.\n\nID nhập khẩu: ${response.data.id}\nTrạng thái: ${response.data.status}`,
+          `Đã nhập ${response.data.total_records_found} bản ghi từ ${importType === 'file_upload' ? 'tệp' : 'văn bản'} của bạn.\n\nID nhập khẩu: ${response.data.id}\nTrạng thái: ${response.data.status}`,
           [
             {
               text: 'Phân tích với AI',
@@ -435,10 +435,10 @@ export default function CreateTaskScreen() {
                 router.push('/screens/Reports/AITaskSelectionScreen?tab=imported');
               },
             },
-            {
-              text: 'Xem chi tiết',
-              onPress: () => router.push(`/screens/Schedule/ImportResultScreen?id=${response.data.id}`),
-            },
+            // {
+            //   text: 'Xem chi tiết',
+            //   onPress: () => router.push(`/screens/Schedule/ImportResultScreen?id=${response.data.id}`),
+            // },
             {
               text: 'Tạo nhiệm vụ khác',
               onPress: () => {
@@ -807,7 +807,7 @@ export default function CreateTaskScreen() {
               {item.original_filename && ` • ${item.original_filename}`}
             </Text>
             <Text style={styles.importStats}>
-              {item.total_records_found || item.total_entries} bản ghi • 
+              {item.total_records_found || item.total_entries} bản ghi •
               {item.successfully_processed || item.success_entries || 0} thành công
               {item.ai_confidence_score && ` • Độ tin cậy AI: ${(parseFloat(item.ai_confidence_score) * 100).toFixed(0)}%`}
             </Text>
