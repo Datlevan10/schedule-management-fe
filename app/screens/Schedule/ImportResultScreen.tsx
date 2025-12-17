@@ -81,7 +81,7 @@ export default function ImportResultScreen() {
 
   const loadEntries = async () => {
     try {
-      const response = await ScheduleImportNewAPI.getImportEntries(parseInt(id));
+      const response = await ScheduleImportNewAPI.getImportEntries(parseInt(id), user?.id);
       if (response.success) {
         setEntries(response.data);
       }
