@@ -186,7 +186,7 @@ export default function CreateTaskScreen() {
         event_metadata: {
           category: category,
           reminder: reminder,
-          reminder_minutes: reminder !== 'Không có' ? reminderToMinutes(reminder) : null,
+          // reminder_minutes: reminder !== 'Không có' ? reminderToMinutes(reminder) : null,
           created_from: 'mobile_app'
         }
       };

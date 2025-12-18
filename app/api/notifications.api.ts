@@ -62,7 +62,7 @@ export interface TaskPriorityResponse {
       priority_ranking: any[];
       task_count: number;
     };
-    combined_priorities?: Array<{
+    combined_priorities?: {
       rank: number;
       task_id: string;
       title: string;
@@ -71,7 +71,7 @@ export interface TaskPriorityResponse {
       urgency_level: "critical" | "high" | "medium" | "low";
       start_datetime: string;
       location?: string;
-    }>;
+    }[];
     summary?: {
       has_manual_analysis: boolean;
       has_csv_analysis: boolean;
@@ -458,7 +458,7 @@ export const NotificationAPI = {
                     `Thời gian: ${new Date(task.start_datetime).toLocaleString('vi-VN')}\n` +
                     `Địa điểm: ${task.location || 'Không xác định'}\n` +
                     `Nguồn: ${task.source === 'manual' ? 'Thủ công' : 'Nhập từ CSV'}`,
-        time: formatTimeAgo(task.start_datetime),
+        // time: formatTimeAgo(task.start_datetime),
         type: "priority_task",
         isRead: false,
         priority: urgencyToPriority(task.urgency_level),
